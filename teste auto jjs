@@ -859,7 +859,73 @@ end
 -- =========================
 
 ------------------------------------------------------------
--- MÓDULO: CONVERTER NÚMEROS POR EXTENSO (COMPLETO + ACENTOS)
+-- SISTEMA DE CHAT (NÃO É MODULE)
+------------------------------------------------------------
+local RemoteChat = {}
+local Connections = {}
+
+local WC = game.WaitForChild
+local FFC = game.FindFirstChild
+
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui", 95)
+
+local CurrentChannel
+local InputBar = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
+
+local Methods = {
+    [Enum.ChatVersion.LegacyChatService] = function(Message)
+        local ChatUI = PlayerGui:FindFirstChild("Chat")
+        
+        if CurrentChannel then
+            CurrentChannel:SendAsync(Message)
+        elseif ChatUI then
+            local ChatFrame = WC(ChatUI, "Frame", 95)
+            local CBPF = WC(ChatFrame, "ChatBarParentFrame", 95)
+
+            local Frame = WC(CBPF, "Frame", 95)
+            local BF = WC(Frame, "BoxFrame", 95)
+
+            local ChatFM = WC(BF, "Frame", 95)
+            local ChatBar = FFC(ChatFM, "ChatBar", 95)
+
+            ChatBar:CaptureFocus()
+            ChatBar.Text = Message
+            ChatBar:ReleaseFocus(true)
+        end
+    end,
+
+    [Enum.ChatVersion.TextChatService] = function(Message)
+        if CurrentChannel then
+            CurrentChannel:SendAsync(Message)
+        end
+    end,
+}
+
+function RemoteChat:Send(Message)
+    pcall(Methods[TextChatService.ChatVersion], Message)
+end
+
+if InputBar then
+    table.insert(Connections, InputBar.Changed:Connect(function(Prop)
+        if Prop == "TargetTextChannel" and InputBar.TargetTextChannel 
+            and InputBar.TargetTextChannel:IsA("TextChannel") then
+
+            CurrentChannel = InputBar.TargetTextChannel
+        end
+    end))
+
+    if InputBar.TargetTextChannel and InputBar.TargetTextChannel:IsA("TextChannel") then
+        CurrentChannel = InputBar.TargetTextChannel
+    end
+end
+
+
+------------------------------------------------------------
+-- CONVERSOR COMPLETO PARA NÚMEROS POR EXTENSO + ACENTOS
 ------------------------------------------------------------
 
 local accentMap = {
@@ -910,29 +976,27 @@ local function threeDigitToWords(n)
     if n == 0 then return "" end
     if n == 100 then return "cem" end
 
-    local h = math.floor(n/100)
-    local t = math.floor((n%100)/10)
-    local u = n%100
-
+    local h = math.floor(n / 100)
+    local rest = n % 100
+    local t = math.floor(rest / 10)
     local parts = {}
 
     if h > 0 then
         table.insert(parts, hundreds[h])
     end
 
-    if u < 20 and u >= 0 and u <= 19 then
-        if u > 0 or (h == 0 and t == 0) then
-            table.insert(parts, units[u])
+    if rest < 20 then
+        if rest > 0 then
+            table.insert(parts, units[rest])
         end
     else
-        local tens_digit = math.floor((n % 100) / 10)
-        local units_digit = n % 10
+        local t_digit = math.floor(rest / 10)
+        local u_digit = rest % 10
 
-        if tens_digit > 1 then
-            table.insert(parts, tens[tens_digit])
-        end
-        if units_digit > 0 then
-            table.insert(parts, units[units_digit])
+        table.insert(parts, tens[t_digit])
+
+        if u_digit > 0 then
+            table.insert(parts, units[u_digit])
         end
     end
 
@@ -954,16 +1018,17 @@ local function numberToPortugueseWords(num)
 
     for i = #groups,1,-1 do
         local val = groups[i]
+
         if val ~= 0 then
             local text = threeDigitToWords(val)
 
             if i > 1 then
                 local scale = (val == 1) and scales_singular[i-1] or scales_plural[i-1]
 
-                if (i == 2 and val == 1) then
+                if i == 2 and val == 1 then
                     text = "mil"
                 else
-                    text = text.." "..scale
+                    text = text .. " " .. scale
                 end
             end
 
@@ -971,19 +1036,19 @@ local function numberToPortugueseWords(num)
         end
     end
 
-    local final = table.concat(parts, " e ")
-    return unicodeUpper(final).."!"
+    local result = table.concat(parts, " e ")
+    return unicodeUpper(result) .. "!"
 end
 
-------------------------------------------------------------
--- MÓDULO DE ENVIO DE CHAT (QUE VOCÊ ME ENVIOU)
-------------------------------------------------------------
-local RemoteChat = require(path_to_your_remotechat_module) 
--- coloque o caminho correto!
 
 ------------------------------------------------------------
--- AUTO JJ (WINDUI)
+-- AUTO JJ — INTEGRAÇAO WINDUI
 ------------------------------------------------------------
+
+local running = false
+local startValue = 1
+local endValue = 100
+local delayValue = 1.5
 
 do
     local Auto = ElementsSection:Tab({
@@ -992,11 +1057,6 @@ do
         IconColor = Purple,
         IconShape = "Square",
     })
-
-    local running = false
-    local startValue = 1
-    local endValue = 100
-    local delayValue = 1.5
 
     Auto:Toggle({
         Title = "Auto JJ's",
@@ -1007,16 +1067,13 @@ do
                 task.spawn(function()
                     for i = startValue, endValue do
                         if not running then break end
-                        local msg = numberToPortugueseWords(i)
-                        RemoteChat:Send(msg)
+                        RemoteChat:Send(numberToPortugueseWords(i))
                         task.wait(delayValue)
                     end
                 end)
             end
         end
     })
-
-    Auto:Space()
 
     Auto:Input({
         Title = "Início",
@@ -1026,8 +1083,6 @@ do
         end
     })
 
-    Auto:Space()
-
     Auto:Input({
         Title = "Fim",
         Placeholder = "Ex: 100",
@@ -1035,8 +1090,6 @@ do
             endValue = tonumber(v) or 100
         end
     })
-
-    Auto:Space()
 
     Auto:Input({
         Title = "Intervalo (segundos)",
@@ -1046,18 +1099,14 @@ do
         end
     })
 
-    Auto:Space()
-
     Auto:Dropdown({
         Title = "Estilo de JJ",
-        Desc = "Qual tipo de JJ será feito?",
         Values = { "JJ (padrão)" },
         Value = "JJ (padrão)",
-        Callback = function(option)
-            -- sistema futuro caso queira outros estilos
-        end
+        Callback = function(opt) end
     })
 end
+
 
 -- =========================
 -- 10) DISCORD
