@@ -903,8 +903,36 @@ if Response and Response.guild then
     })
 end
 end
+
+
 -- =========================
--- 11) ICONS
+-- 11) Sugestões
+-- =========================
+
+do
+local Sugestoes = Outros:Tab({
+    Title = "Sugestōes",
+    Icon = "geist:logo-discord",
+    IconColor = Blue
+})
+
+Sugestoes:Input({
+        Title = "Input Textarea",
+        Type = "Textarea",
+        Icon = "mouse",
+    })
+Sugestoes:Space()
+
+Sugestoes:Button({
+        Title = "Enviar sugestão",
+        Callback = function()
+            Notify("Agradeço!", "Sugestão enviada.")
+        end
+    })
+end
+
+-- =========================
+-- 12) ICONS
 -- =========================
 
 do
