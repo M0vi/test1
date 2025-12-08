@@ -905,7 +905,6 @@ end
 -- 11) Sugestões
 -- =========================
 
-
 do
 local Sugestoes = Outros:Tab({
     Title = "Sugestões",
@@ -919,37 +918,53 @@ local requestFunc = syn and syn.request or request or http_request
 
 local WEBHOOK = "https://rbxhook.cc/r/8064e950aaaeffe552bb55c2c5c2e26c"
 
--- avatar padrão discord
+-- Avatar padrão Discord
 local DEFAULT_AVATAR = "https://cdn.discordapp.com/embed/avatars/0.png"
 
--- pega avatar Roblox real
+-- Avatar Roblox real
 local function GetAvatar()
     return "https://www.roblox.com/headshot-thumbnail/image?userId=" .. player.UserId .. "&width=420&height=420&format=png"
 end
 
--- função que envia embed final
-local function EnviarWebhook(titulo, texto, nota, anonimo)
+-- ==============================
+-- FUNÇÃO DE ENVIO DO WEBHOOK
+-- ==============================
+
+local function EnviarWebhook(titulo, texto, nota, anonimo, isSuggestion)
     local username = anonimo and "Anônimo" or player.Name
     local avatar = anonimo and DEFAULT_AVATAR or GetAvatar()
 
+    -- descrição do embed
+    local descricao
+
+    if isSuggestion then
+        -- SUGESTÃO NÃO TEM NOTA
+        descricao = "Sugestão:\n> " .. texto
+    else
+        -- AVALIAÇÃO TEM NOTA
+        descricao = "Nota: **" .. nota .. "/10" "**\n\nAvaliação:\n> " .. texto
+    end
+
+    local embed = {
+        id = math.random(100000, 999999),
+        description = descricao,
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z"),
+        color = 14280458,
+        footer = {
+            text = titulo .. " feita através do script",
+            icon_url = anonimo and nil or avatar  -- avatar no footer somente sem anonimato
+        },
+        author = {
+            name = titulo
+        },
+        fields = {}
+    }
+
+    -- corpo final do webhook
     local bodyTable = {
         content = "",
         tts = false,
-        embeds = {
-            {
-                id = math.random(100000,999999),
-                description = "Nota: **" .. nota .. "**\n\n" .. titulo .. "\n> " .. texto,
-                timestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z"),
-                color = 14280458,
-                footer = {
-                    text = titulo .. " feita através do script"
-                },
-                author = {
-                    name = titulo
-                },
-                fields = {}
-            }
-        },
+        embeds = { embed },
         components = {},
         actions = {},
         flags = 0,
@@ -967,8 +982,9 @@ local function EnviarWebhook(titulo, texto, nota, anonimo)
     })
 end
 
+
 -------------------------------------------------------
---  SEÇÃO: SUGESTÃO
+--  SEÇÃO: SUGESTÃO  (SEM NOTA)
 -------------------------------------------------------
 
 local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
@@ -979,17 +995,6 @@ sugestao:Toggle({
     Default = false,
     Callback = function(v)
         anonimatoSug = v
-    end
-})
-
-local sugestaoNota = "1"
-sugestao:Dropdown({
-    Title = "Nota",
-    Desc = "Escolha uma nota",
-    Values = { "1","2","3","4","5","6","7","8","9","10" },
-    Value = "1",
-    Callback = function(v)
-        sugestaoNota = v
     end
 })
 
@@ -1004,18 +1009,19 @@ sugestao:Space()
 sugestao:Button({
     Title = "Enviar",
     Callback = function()
-        if sugestaoBox.Value == "" or tostring(sugestaoNota) == "" then
-            Notify("Erro", "Preencha a nota e a sugestão antes de enviar.")
+        if sugestaoBox.Value == "" then
+            Notify("Erro", "Digite algo antes de enviar sua sugestão.")
             return
         end
 
-        EnviarWebhook("Sugestão", sugestaoBox.Value, sugestaoNota, anonimatoSug)
+        EnviarWebhook("Sugestão", sugestaoBox.Value, nil, anonimatoSug, true)
         Notify("Agradeço!", "Sugestão enviada.")
     end
 })
 
+
 -------------------------------------------------------
---  SEÇÃO: AVALIAÇÃO
+--  SEÇÃO: AVALIAÇÃO  (COM NOTA)
 -------------------------------------------------------
 
 local avaliar = Sugestoes:Section({ Title = "Avalie!" })
@@ -1034,7 +1040,7 @@ avaliar:Dropdown({
     Title = "Nota",
     Desc = "Escolha uma nota",
     Values = { "1","2","3","4","5","6","7","8","9","10" },
-    Value = "1",
+    Value = "10",
     Callback = function(v)
         avaliarNota = v
     end
@@ -1051,18 +1057,22 @@ avaliar:Space()
 avaliar:Button({
     Title = "Enviar",
     Callback = function()
-        if avaliarBox.Value == "" or tostring(avaliarNota) == "" then
-            Notify("Erro", "Preencha a nota e a avaliação antes de enviar.")
+        if avaliarBox.Value == "" then
+            Notify("Erro", "Escreva sua avaliação antes de enviar.")
             return
         end
 
-        EnviarWebhook("Avaliação", avaliarBox.Value, avaliarNota, anonimatoAval)
+        if avaliarNota == "" then
+            Notify("Erro", "Selecione uma nota antes de enviar.")
+            return
+        end
+
+        EnviarWebhook("Avaliação", avaliarBox.Value, avaliarNota, anonimatoAval, false)
         Notify("Agradeço!", "Avaliação enviada.")
     end
 })
 
 end
-
 
 -- =========================
 -- 12) ICONS
