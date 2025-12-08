@@ -128,35 +128,40 @@ local Red = Color3.fromHex("#EF4F1D")
 -- =========================
 do
     local AboutTab = Window:Tab({
-        Title = "Informações",
-        Desc = "Informações",
-        Icon = "solar:InfoSquareBold",
-        IconColor = Grey,
-        IconShape = "Square",
+        Title = "Atualizações",
+        Desc = "",
+        Icon = "lucide:bell",
+        IconColor = Yellow
     })
 
     local AboutSection = AboutTab:Section({
-        Title = "[E.B] Main Loader",
+        Title = "Main Loader",
     })
 
     AboutSection:Image({
-        Image = "https://i.pinimg.com/736x/a6/69/ab/a669aba94931a9c23607916fb5516209.jpg",
-        AspectRatio = "16:9",
+        Image = "https://i.pinimg.com/736x/6f/71/8d/6f718d8dab224534767176f4da2fdf0e.jpg",
+        AspectRatio = "4:3",
         Radius = 9,
     })
 
     AboutSection:Space({ Columns = 3 })
 
     AboutSection:Section({
-        Title = "Informações de desenvolvimento",
-        TextSize = 24,
+        Title = "Changelogs:",
+        TextSize = 30,
         FontWeight = Enum.FontWeight.SemiBold,
     })
 
     AboutSection:Space()
 
     AboutSection:Section({
-        Title = [[Desenvolvido e mantido por @fp3, em LuaU. Isso é apenas um hobby!]],
+        Title = [[ 
+
+- Implementação do Auto JJ's
+- Diversas funções exclusivas
+- Melhoria na estética da UI
+
+Desenvolvido e mantido por @fp3, em LuaU. Isso é apenas um hobby.]],
         TextSize = 18,
         TextTransparency = .35,
         FontWeight = Enum.FontWeight.Medium,
