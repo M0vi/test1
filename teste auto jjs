@@ -1087,7 +1087,7 @@ local customSuffix = ""
 do
     local Auto = ElementsSection:Tab({
         Title = "Auto JJ's",
-        Icon = "solar:keyboard-linear",
+        Icon = "lucide:keyboard",
         IconColor = Red
     })
 
