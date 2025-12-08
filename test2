@@ -904,7 +904,7 @@ end
 -- =========================
 -- 11) Sugestões
 -- =========================
-
+do
 local Sugestoes = Outros:Tab({
     Title = "Sugestões",
     Icon = "lucide:message-circle",
@@ -1262,6 +1262,7 @@ avaliar:Button({
         Notify("Agradeço!", "Avaliação enviada.")
     end
 })
+end
 
 -- =========================
 -- 12) ICONS
