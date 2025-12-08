@@ -912,19 +912,149 @@ local Sugestoes = Outros:Tab({
     IconColor = Yellow
 })
 
+local HttpService = game:GetService("HttpService")
+local player = game:GetService("Players").LocalPlayer
 local requestFunc = syn and syn.request or request or http_request
 local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
 
--- antispam
-local cooldowns = {
-    sugestao  = {},
-    avaliacao = {}
-}
+---------------------------------------------------------------------
+--                          ENCRYPT / CHECKSUM
+---------------------------------------------------------------------
 
-local COOLDOWN_SUGESTAO  = 1800
-local COOLDOWN_AVALIACAO = 21600
+local function checksum(str)
+    local sum = 0
+    for i = 1, #str do
+        sum = (sum + string.byte(str, i)) % 65535
+    end
+    return sum
+end
 
--- webhooks
+local function xorEncode(str, key)
+    local out = {}
+    for i = 1, #str do
+        local c1 = str:byte(i)
+        local c2 = key:byte(((i - 1) % #key) + 1)
+        out[i] = string.char(bit32.bxor(c1, c2))
+    end
+    return table.concat(out)
+end
+
+local function b64e(str) return HttpService:Base64Encode(str) end
+local function b64d(str) return HttpService:Base64Decode(str) end
+
+---------------------------------------------------------------------
+--                          STORAGE SYSTEM
+---------------------------------------------------------------------
+
+local xorKey = HWID:sub(1,16)
+local folder = "sys"
+
+if not isfolder(folder) then
+    makefolder(folder)
+end
+
+local indexFile = folder .. "/map.key"
+
+-- cria arquivo index caso não exista
+if not isfile(indexFile) then
+    writefile(indexFile, b64e(tostring(math.random(0,999))))
+end
+
+local realName = b64d(readfile(indexFile))
+local saveFile = folder .. "/" .. realName .. ".dat"
+
+---------------------------------------------------------------------
+--              CRIAR HONEYPOTS FALSOS (INVIABILIZA BURLO)
+---------------------------------------------------------------------
+
+local function createHoneypots(except)
+    local qtd = math.random(30,60)
+    for i = 1, qtd do
+        local name = tostring(math.random(0,999))
+        if name ~= except then
+            local path = folder .. "/" .. name .. ".dat"
+            if not isfile(path) then
+                local fakeContent = xorEncode("X" .. tostring(math.random(1000,99999)), xorKey)
+                writefile(path, b64e(fakeContent))
+            end
+        end
+    end
+end
+
+-- cria arquivo real + honeypots se ele não existir
+if not isfile(saveFile) then
+    local encrypted = xorEncode("0:0", xorKey)
+    writefile(saveFile, b64e(encrypted))
+    createHoneypots(realName)
+end
+
+---------------------------------------------------------------------
+--              LER/SALVAR TIMESTAMP CRIPTOGRAFADO
+---------------------------------------------------------------------
+
+local function saveTimestamp(ts)
+    local data = tostring(ts)
+    local sig  = checksum(data)
+    local pack = data .. ":" .. tostring(sig)
+    local enc = xorEncode(pack, xorKey)
+    writefile(saveFile, b64e(enc))
+
+    -- recria honeypots a cada gravação
+    createHoneypots(realName)
+end
+
+local function loadTimestamp()
+    local encoded = readfile(saveFile)
+    local decoded
+
+    pcall(function() decoded = xorEncode(b64d(encoded), xorKey) end)
+    if not decoded then
+        saveTimestamp(0)
+        return 0
+    end
+
+    local parts = string.split(decoded, ":")
+    if #parts ~= 2 then
+        saveTimestamp(0)
+        return 0
+    end
+
+    local ts  = tonumber(parts[1]) or 0
+    local sig = tonumber(parts[2]) or 0
+
+    -- verifica integridade
+    if checksum(tostring(ts)) ~= sig then
+        saveTimestamp(0)
+        return 0
+    end
+
+    return ts
+end
+
+---------------------------------------------------------------------
+--              COOLDOWN PERSISTENTE POR HWID
+---------------------------------------------------------------------
+
+local COOLDOWN_SUGESTAO  = 1800     -- 30min
+local COOLDOWN_AVALIACAO = 21600    -- 6h
+
+local nextAllowed = loadTimestamp()
+
+local function canSend(cooldown)
+    local now = os.time()
+    return now >= nextAllowed, math.max(0, nextAllowed - now)
+end
+
+local function registerSend(cooldown)
+    local now = os.time()
+    nextAllowed = now + cooldown
+    saveTimestamp(nextAllowed)
+end
+
+---------------------------------------------------------------------
+--                     FUNÇÃO DE ENVIO
+---------------------------------------------------------------------
+
 local WEBHOOK_AVALIACAO = "https://rbxhook.cc/r/cc3ff315c0a81e4a0c4187195b3388ed"
 local WEBHOOK_SUGESTAO  = "https://rbxhook.cc/r/5b1667a03cf9b0dcdfce0bb5144bf58b"
 
@@ -934,7 +1064,6 @@ end
 
 local function EnviarPayload(isSuggestion, texto, nota, anonimo)
     local webhookURL = isSuggestion and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
-
     local who = anonimo and "Anônimo" or player.Name
 
     local authorObj = nil
@@ -970,22 +1099,11 @@ local function EnviarPayload(isSuggestion, texto, nota, anonimo)
 
     local bodyTable = {
         content = "",
-        tts = false,
-        embeds = { embed },
-        components = {},
-        actions = {},
-        flags = 0,
+        embeds  = { embed },
         username = (isSuggestion and "Sugestão" or "Avaliação")
     }
 
-    local ok, body = pcall(function() 
-        return HttpService:JSONEncode(bodyTable) 
-    end)
-
-    if not ok then
-        Notify("Erro", "Falha no payload.")
-        return
-    end
+    local body = HttpService:JSONEncode(bodyTable)
 
     pcall(function()
         requestFunc({
@@ -998,25 +1116,21 @@ local function EnviarPayload(isSuggestion, texto, nota, anonimo)
 end
 
 
--------------------------------------------------------
---  SUGESTÃO
--------------------------------------------------------
+---------------------------------------------------------------------
+--  GUI: SUGESTÃO
+---------------------------------------------------------------------
 
 local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
 
 local anonimatoSug = false
 sugestao:Toggle({
     Title = "Anonimato",
-    Default = false,
-    Callback = function(v)
-        anonimatoSug = v
-    end
+    Callback = function(v) anonimatoSug = v end
 })
 
 local sugestaoBox = sugestao:Input({
     Title = "Sua sugestão",
-    Type = "Textarea",
-    Icon = "mouse",
+    Type = "Textarea"
 })
 
 sugestao:Space()
@@ -1024,58 +1138,47 @@ sugestao:Space()
 sugestao:Button({
     Title = "Enviar",
     Callback = function()
-        local now = os.clock()
-
-        -- Anti-spam por HWID
-        if cooldowns.sugestao[HWID] and now - cooldowns.sugestao[HWID] < COOLDOWN_SUGESTAO then
-            local restante = math.floor(COOLDOWN_SUGESTAO - (now - cooldowns.sugestao[HWID]))
-            Notify("Espere um pouco!", "Aguarde " .. restante .. "s para enviar outra sugestão.")
+        local ok, faltam = canSend(COOLDOWN_SUGESTAO)
+        if not ok then
+            Notify("Espere um pouco!", "Aguarde " .. faltam .. "s para enviar outra sugestão.")
             return
         end
 
-        if not sugestaoBox.Value or sugestaoBox.Value == "" then
-            Notify("Erro", "Digite algo antes de enviar sua sugestão.")
+        if sugestaoBox.Value == "" then
+            Notify("Erro", "Digite algo antes de enviar.")
             return
         end
 
-        cooldowns.sugestao[HWID] = now
-
+        registerSend(COOLDOWN_SUGESTAO)
         EnviarPayload(true, sugestaoBox.Value, nil, anonimatoSug)
         Notify("Agradeço!", "Sugestão enviada.")
     end
 })
 
 
--------------------------------------------------------
---  AVALIAÇÃO
--------------------------------------------------------
+---------------------------------------------------------------------
+--  GUI: AVALIAÇÃO
+---------------------------------------------------------------------
 
 local avaliar = Sugestoes:Section({ Title = "Avalie!" })
 
 local anonimatoAval = false
 avaliar:Toggle({
     Title = "Anonimato",
-    Default = false,
-    Callback = function(v)
-        anonimatoAval = v
-    end
+    Callback = function(v) anonimatoAval = v end
 })
 
 local avaliarNota = "10"
 avaliar:Dropdown({
     Title = "Nota",
-    Desc = "Escolha uma nota",
     Values = { "1","2","3","4","5","6","7","8","9","10" },
     Value = "10",
-    Callback = function(v)
-        avaliarNota = v
-    end
+    Callback = function(v) avaliarNota = v end
 })
 
 local avaliarBox = avaliar:Input({
     Title = "Avaliação",
-    Type = "Textarea",
-    Icon = "mouse",
+    Type = "Textarea"
 })
 
 avaliar:Space()
@@ -1083,33 +1186,23 @@ avaliar:Space()
 avaliar:Button({
     Title = "Enviar",
     Callback = function()
-        local now = os.clock()
-
-        -- anti spam HWID
-        if cooldowns.avaliacao[HWID] and now - cooldowns.avaliacao[HWID] < COOLDOWN_AVALIACAO then
-            local restante = math.floor(COOLDOWN_AVALIACAO - (now - cooldowns.avaliacao[HWID]))
-            Notify("Espere um pouco!", "Aguarde " .. restante .. "s para enviar outra avaliação.")
+        local ok, faltam = canSend(COOLDOWN_AVALIACAO)
+        if not ok then
+            Notify("Espere um pouco!", "Aguarde " .. faltam .. "s para enviar outra avaliação.")
             return
         end
 
-        if not avaliarBox.Value or avaliarBox.Value == "" then
+        if avaliarBox.Value == "" then
             Notify("Erro", "Escreva sua avaliação antes de enviar.")
             return
         end
 
-        if not avaliarNota or avaliarNota == "" then
-            Notify("Erro", "Selecione uma nota antes de enviar.")
-            return
-        end
-
-        cooldowns.avaliacao[HWID] = now
-
+        registerSend(COOLDOWN_AVALIACAO)
         EnviarPayload(false, avaliarBox.Value, avaliarNota, anonimatoAval)
         Notify("Agradeço!", "Avaliação enviada.")
     end
 })
 end
-
 
 -- =========================
 -- 12) ICONS
