@@ -1120,7 +1120,13 @@ do
         )
     end
 
-    Auto:Toggle({
+-- Section de JJ's
+
+local JJs = Auto:Section({
+        Title = "Essenciais"
+    })
+
+    JJs:Toggle({
         Title = "Auto JJ's",
         Callback = function(v)
             running = v
@@ -1209,107 +1215,45 @@ do
         end
     })
 
-    Auto:Space()
+    JJs:Space()
 
-    Auto:Input({
+    JJs:Input({
         Title = "Início",
         Placeholder = "Ex: 1",
         Callback = function(v)
             startValue = tonumber(v) or 1
         end
     })
+JJs:Space()
 
-    Auto:Input({
+    JJs:Input({
         Title = "Fim",
         Placeholder = "Ex: 100",
         Callback = function(v)
             endValue = tonumber(v) or 100
         end
     })
+JJs:Space()
 
-    Auto:Space()
-
-    Auto:Input({
-        Title = "Intervalo (segundos)",
-        Placeholder = "Ex: 1.5",
-        Callback = function(v)
-            delayValue = tonumber(v) or 1.5
-        end
-    })
-
-    Auto:Toggle({
-        Title = "Intervalo aleatório",
-        Desc  = "Usa intervalo entre mínimo e máximo.",
-        Callback = function(v)
-            randomDelayEnabled = v
-        end
-    })
-
-    Auto:Input({
-        Title = "Mínimo",
-        Placeholder = "Ex: 1",
-        Callback = function(v)
-            randomMin = tonumber(v) or 1
-        end
-    })
-
-    Auto:Input({
-        Title = "Máximo",
-        Placeholder = "Ex: 3",
-        Callback = function(v)
-            randomMax = tonumber(v) or 3
-        end
-    })
-
-    Auto:Space()
-
-    Auto:Toggle({
-        Title = "Forçar finalizaçåo",
-        Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
-        Callback = function(v)
-            finishInTimeEnabled = v
-        end
-    })
-
-    Auto:Input({
-        Title = "Tempo (segundos)",
-        Placeholder = "Ex: 100",
-        Callback = function(v)
-            finishTotalTime = tonumber(v) or 60
-        end
-    })
-
-    Auto:Space()
-
-    Auto:Toggle({
-        Title = "Modo reverso",
-        Desc  = "Conta de trás pra frente.",
-        Callback = function(v)
-            reverseEnabled = v
-        end
-    })
-
-    Auto:Space()
-
-    Auto:Toggle({
+JJs:Toggle({
         Title = "Espaçamento",
-        Desc = "UM ! em vez de UM!",
+        Desc = "Separa o sufixo do número. (Ex: UM !)",
         Callback = function(v)
             spacingEnabled = v
         end
     })
+JJs:Space()
 
-    Auto:Toggle({
+    JJs:Toggle({
         Title = "Pular",
         Desc = "Pular ao enviar JJ's.",
         Callback = function(v)
             jumpEnabled = v
         end
     })
+JJs:Space()
 
-    Auto:Space()
-
-    Auto:Dropdown({
+JJs:Dropdown({
         Title = "Sufixo",
         Values = { "!", "?", ".", ",", "/" },
         Value = "!",
@@ -1317,12 +1261,83 @@ do
             suffix = v
         end
     })
+JJs:Space()
 
-    Auto:Input({
+    JJs:Input({
         Title = "Sufixo customizado",
         Placeholder = "Ex: @",
         Callback = function(v)
             customSuffix = tostring(v or "")
+        end
+    })
+
+-- Section dos intervalos
+
+local intervalos = Auto:Section({
+        Title = "Intervalo"
+    })
+
+    intervalos:Input({
+        Title = "Intervalo fixo (segundos)",
+        Placeholder = "Ex: 1.5",
+        Callback = function(v)
+            delayValue = tonumber(v) or 1.5
+        end
+    })
+intervalos:Space()
+
+    intervalos:Toggle({
+        Title = "Intervalo dinâmico",
+        Desc  = "Usa um intervalo aleatório entre mínimo e máximo.",
+        Callback = function(v)
+            randomDelayEnabled = v
+        end
+    })
+
+    intervalos:Input({
+        Title = "Mínimo",
+        Placeholder = "Ex: 1",
+        Callback = function(v)
+            randomMin = tonumber(v) or 1
+        end
+    })
+
+    intervalos:Input({
+        Title = "Máximo",
+        Placeholder = "Ex: 3",
+        Callback = function(v)
+            randomMax = tonumber(v) or 3
+        end
+    })
+    intervalos:Space()
+
+    intervalos:Toggle({
+        Title = "Forçar finalizaçåo",
+        Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
+        Callback = function(v)
+            finishInTimeEnabled = v
+        end
+    })
+
+    intervalos:Input({
+        Title = "Tempo (segundos)",
+        Placeholder = "Ex: 100",
+        Callback = function(v)
+            finishTotalTime = tonumber(v) or 60
+        end
+    })
+
+-- Section Extras
+
+local Extras = Auto:Section({
+        Title = "Extras"
+    })
+
+    Extras:Toggle({
+        Title = "Modo reverso",
+        Desc  = "Conta de trás pra frente.",
+        Callback = function(v)
+            reverseEnabled = v
         end
     })
 end
@@ -1487,7 +1502,7 @@ sugestao:Button({
         -- COOLDOWN
         if now < Saved.sugestao then
             local rest = Saved.sugestao - now
-            Notify("Espere!", "Você só pode enviar outra sugestão em " .. rest .. " segundos.")
+            Notify("COOLDOWN!", "Você só pode enviar outra sugestão em " .. rest .. " segundos.")
             return
         end
 
@@ -1496,12 +1511,12 @@ sugestao:Button({
             return
         end
 
-        -- atualiza i cooldown
+        -- atualiza o cooldown
         Saved.sugestao = now + COOLDOWN_SUGESTAO
         Save()
 
         EnviarPayload(true, sugestaoBox.Value, nil, anonimatoSug)
-        Notify("Obrigado!", "Sugestão enviada.")
+        Notify("Obrigada!", "Sugestão enviada.")
     end
 })
 
