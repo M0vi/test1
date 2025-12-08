@@ -118,6 +118,7 @@ Window:Tag({
 
 --user icon
 Window.Icon:Enable()
+end
 
 local Purple = Color3.fromHex("#7775F2")
 local Yellow = Color3.fromHex("#ECA201")
