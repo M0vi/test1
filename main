@@ -116,6 +116,9 @@ Window:Tag({
     Color = Color3.fromHex("#1c1c1c")
 })
 
+--user icon
+Window.Icon:Enable()
+
 local Purple = Color3.fromHex("#7775F2")
 local Yellow = Color3.fromHex("#ECA201")
 local Green = Color3.fromHex("#10C550")
@@ -557,7 +560,7 @@ do
 
     SectionPlayer:Paragraph({
         Title = "Aplicar velocidade",
-        Desc = "Aplica a velocidade determinada..",
+        Desc = "Aplica a velocidade determinada.",
     })
 
     SectionPlayer:Button({
@@ -874,7 +877,7 @@ do
     }).Body)
 
     local DiscordTab = Outros:Tab({
-    Title = "Discord",
+    Title = "Comunidade",
     Icon = "geist:logo-discord",
     IconColor = Blue
 })
@@ -887,7 +890,7 @@ if Response and Response.guild then
 
     DiscordTab:Paragraph({
         Title = tostring(Response.guild.name),
-        Desc = tostring(Response.guild.description),
+        Desc = "Servidor de exploits para Roblox",
         Image = "https://cdn.discordapp.com/icons/" .. Response.guild.id .. "/" .. Response.guild.icon .. ".png?size=1024",
         Thumbnail = "https://i.pinimg.com/1200x/63/8c/5e/638c5e9084688a81fdf74200e85c655c.jpg",
         ImageSize = 80,
@@ -914,18 +917,3 @@ do
         IconColor = Red
     })
 end
-
--- especial
-Window:CreateTopbarButton("HideUI", "bird", function()
-    if Window and Window.Main then
-        Window.Main.Enabled = false
-    end
-end, 999)
-
-Player.Chatted:Connect(function(msg)
-    if msg == " " then
-        if Window and Window.Main then
-            Window.Main.Enabled = true
-        end
-    end
-end)
