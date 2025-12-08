@@ -916,7 +916,11 @@ local HttpService = game:GetService("HttpService")
 local player = game:GetService("Players").LocalPlayer
 local requestFunc = syn and syn.request or request or http_request
 
-local WEBHOOK = "https://rbxhook.cc/r/8064e950aaaeffe552bb55c2c5c2e26c"
+-- ===========================
+-- WEBHOOKS SEPARADOS
+-- ===========================
+local WEBHOOK_AVALIACAO = "https://rbxhook.cc/r/cc3ff315c0a81e4a0c4187195b3388ed"
+local WEBHOOK_SUGESTAO  = "https://rbxhook.cc/r/5b1667a03cf9b0dcdfce0bb5144bf58b"
 
 -- Avatar padrão Discord
 local DEFAULT_AVATAR = "https://cdn.discordapp.com/embed/avatars/0.png"
@@ -930,61 +934,57 @@ end
 -- FUNÇÃO DE ENVIO DO WEBHOOK
 -- ==============================
 
-local function EnviarWebhook(titulo, texto, nota, anonimo, isSuggestion)
+local function EnviarWebhook(isSuggestion, texto, nota, anonimo)
+    local webhookURL = isSuggestion and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
+
     local username = anonimo and "Anônimo" or player.Name
     local avatar = anonimo and DEFAULT_AVATAR or GetAvatar()
 
-    -- descrição do embed
-    local descricao
+    -- ===========================
+    -- MONTAR EMBED
+    -- ===========================
+    local embed = {
+        title = isSuggestion and "Sugestão enviada por:" or "Avaliação feita por:",
+        description = isSuggestion
+            and ("> **" .. texto .. "**")
+            or ("> **" .. texto .. "**"),
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z"),
+        color = isSuggestion and 3447003 or 14280458, -- azul / amarelinho
+        footer = {
+            text = (isSuggestion and "Sugestão" or "Avaliação") .. " feita através do script",
+            icon_url = anonimo and nil or avatar
+        }
+    }
 
-    if isSuggestion then
-        -- SUGESTÃO NÃO TEM NOTA
-        descricao = "Sugestão:\n> " .. texto
-    else
-        -- AVALIAÇÃO TEM NOTA
-        descricao = "Nota: **" .. nota .. "/10**\n\nAvaliação:\n> " .. texto
+    -- author só existe na AVALIAÇÃO
+    if not isSuggestion then
+        embed.author = {
+            name = "Nota: " .. nota .. "/10",
+            icon_url = anonimo and nil or avatar
+        }
     end
 
-    local embed = {
-        id = math.random(100000, 999999),
-        description = descricao,
-        timestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z"),
-        color = 14280458,
-        footer = {
-            text = titulo .. " feita através do script",
-            icon_url = anonimo and nil or avatar  -- avatar no footer somente sem anonimato
-        },
-        author = {
-            name = titulo
-        },
-        fields = {}
-    }
-
-    -- corpo final do webhook
+    -- ===========================
+    -- ENVIAR
+    -- ===========================
     local bodyTable = {
-        content = "",
-        tts = false,
-        embeds = { embed },
-        components = {},
-        actions = {},
-        flags = 0,
         username = username,
-        avatar_url = avatar
+        avatar_url = avatar,
+        embeds = { embed }
     }
-
-    local encoded = HttpService:JSONEncode(bodyTable)
 
     requestFunc({
-        Url = WEBHOOK,
+        Url = webhookURL,
         Method = "POST",
         Headers = { ["Content-Type"] = "application/json" },
-        Body = encoded
+        Body = HttpService:JSONEncode(bodyTable)
     })
 end
 
 
+
 -------------------------------------------------------
---  SEÇÃO: SUGESTÃO  (SEM NOTA)
+--  SEÇÃO: SUGESTÃO (SEM NOTA)
 -------------------------------------------------------
 
 local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
@@ -1014,14 +1014,15 @@ sugestao:Button({
             return
         end
 
-        EnviarWebhook("Sugestão", sugestaoBox.Value, nil, anonimatoSug, true)
+        EnviarWebhook(true, sugestaoBox.Value, nil, anonimatoSug)
         Notify("Agradeço!", "Sugestão enviada.")
     end
 })
 
 
+
 -------------------------------------------------------
---  SEÇÃO: AVALIAÇÃO  (COM NOTA)
+--  SEÇÃO: AVALIAÇÃO (COM NOTA)
 -------------------------------------------------------
 
 local avaliar = Sugestoes:Section({ Title = "Avalie!" })
@@ -1035,7 +1036,7 @@ avaliar:Toggle({
     end
 })
 
-local avaliarNota = "1"
+local avaliarNota = "10"
 avaliar:Dropdown({
     Title = "Nota",
     Desc = "Escolha uma nota",
@@ -1067,7 +1068,7 @@ avaliar:Button({
             return
         end
 
-        EnviarWebhook("Avaliação", avaliarBox.Value, avaliarNota, anonimatoAval, false)
+        EnviarWebhook(false, avaliarBox.Value, avaliarNota, anonimatoAval)
         Notify("Agradeço!", "Avaliação enviada.")
     end
 })
