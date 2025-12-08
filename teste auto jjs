@@ -1214,7 +1214,6 @@ local JJs = Auto:Section({
             end
         end
     })
-
     JJs:Space()
 
     JJs:Input({
@@ -1236,15 +1235,6 @@ JJs:Space()
 JJs:Space()
 
 JJs:Toggle({
-        Title = "Espaçamento",
-        Desc = "Separa o sufixo do número. (Ex: UM !)",
-        Callback = function(v)
-            spacingEnabled = v
-        end
-    })
-JJs:Space()
-
-    JJs:Toggle({
         Title = "Pular",
         Desc = "Pular ao enviar JJ's.",
         Callback = function(v)
@@ -1253,12 +1243,11 @@ JJs:Space()
     })
 JJs:Space()
 
-JJs:Dropdown({
-        Title = "Sufixo",
-        Values = { "! (padrão)", "?", ".", ",", "/" },
-        Value = "!",
+JJs:Toggle({
+        Title = "Espaçamento",
+        Desc = "Separa o sufixo do número. (Ex: UM !)",
         Callback = function(v)
-            suffix = v
+            spacingEnabled = v
         end
     })
 JJs:Space()
@@ -1276,6 +1265,16 @@ JJs:Toggle({
         Placeholder = "Ex: 100",
         Callback = function(v)
             finishTotalTime = tonumber(v) or 60
+        end
+    })
+JJs:Space()
+
+JJs:Dropdown({
+        Title = "Sufixo",
+        Values = { "! (padrão)", "?", ".", ",", "/" },
+        Value = "!",
+        Callback = function(v)
+            suffix = v
         end
     })
 JJs:Space()
