@@ -916,75 +916,79 @@ local HttpService = game:GetService("HttpService")
 local player = game:GetService("Players").LocalPlayer
 local requestFunc = syn and syn.request or request or http_request
 
--- ===========================
--- WEBHOOKS SEPARADOS
--- ===========================
+-- webhooks separados
 local WEBHOOK_AVALIACAO = "https://rbxhook.cc/r/cc3ff315c0a81e4a0c4187195b3388ed"
 local WEBHOOK_SUGESTAO  = "https://rbxhook.cc/r/5b1667a03cf9b0dcdfce0bb5144bf58b"
 
--- Avatar padrão Discord
-local DEFAULT_AVATAR = "https://cdn.discordapp.com/embed/avatars/0.png"
-
--- Avatar Roblox real
-local function GetAvatar()
-    return "https://www.roblox.com/headshot-thumbnail/image?userId=" .. player.UserId .. "&width=420&height=420&format=png"
+-- util: timestamp ISO compatível
+local function isoTimestamp()
+    return os.date("!%Y-%m-%dT%H:%M:%S.000Z")
 end
 
--- ==============================
--- FUNÇÃO DE ENVIO DO WEBHOOK
--- ==============================
-
-local function EnviarWebhook(isSuggestion, texto, nota, anonimo)
+-- monta e envia o payload exatamente no formato que você indicou
+local function EnviarPayload(isSuggestion, texto, nota, anonimo)
     local webhookURL = isSuggestion and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
 
-    local username = anonimo and "Anônimo" or player.Name
-    local avatar = anonimo and DEFAULT_AVATAR or GetAvatar()
+    -- title deve conter o nome do usuário ou "Anônimo"
+    local who = anonimo and "Anônimo" or player.Name
 
-    -- ===========================
-    -- MONTAR EMBED
-    -- ===========================
-    local embed = {
-        title = isSuggestion and "Sugestão enviada por:" or "Avaliação feita por:",
-        description = isSuggestion
-            and ("> **" .. texto .. "**")
-            or ("> **" .. texto .. "**"),
-        timestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z"),
-        color = isSuggestion and 3447003 or 14280458, -- azul / amarelinho
-        footer = {
-            text = (isSuggestion and "Sugestão" or "Avaliação") .. " feita através do script",
-            icon_url = anonimo and nil or avatar
-        }
-    }
-
-    -- author só existe na AVALIAÇÃO
+    -- author.name deve ser "Nota: (NOTA)/10" quando for avaliação
+    local authorObj = nil
     if not isSuggestion then
-        embed.author = {
-            name = "Nota: " .. nota .. "/10",
-            icon_url = anonimo and nil or avatar
-        }
+        authorObj = { name = "Nota: " .. tostring(nota) .. "/10" }
     end
 
-    -- ===========================
-    -- ENVIAR
-    -- ===========================
-    local bodyTable = {
-        username = username,
-        avatar_url = avatar,
-        embeds = { embed }
+    -- descrição com quebras conforme seu exemplo: "\n> **avaliacao**\n\n"
+    local descricao = "\n> **" .. tostring(texto) .. "**\n\n"
+
+    local embed = {
+        id = math.random(100000,999999),
+        description = descricao,
+        timestamp = isoTimestamp(),
+        color = 14280458,
+        footer = {
+            text = (isSuggestion and "Sugestão enviada através do script" or "Avaliação feita através do script")
+        },
+        author = authorObj,
+        fields = {},
+        title = (isSuggestion and ("Sugestão enviada por: " .. who) or ("Avaliação feita por: " .. who))
     }
 
-    requestFunc({
-        Url = webhookURL,
-        Method = "POST",
-        Headers = { ["Content-Type"] = "application/json" },
-        Body = HttpService:JSONEncode(bodyTable)
-    })
-end
+    local bodyTable = {
+        content = "",
+        tts = false,
+        embeds = { embed },
+        components = {},
+        actions = {},
+        flags = 0,
+        username = (isSuggestion and "Sugestão" or "Avaliação")
+    }
 
+    -- encode e post
+    local ok, body = pcall(function() return HttpService:JSONEncode(bodyTable) end)
+    if not ok then
+        Notify("Erro", "Falha ao gerar JSON do payload.")
+        return
+    end
+
+    -- request
+    local suc, resp = pcall(function()
+        return requestFunc({
+            Url = webhookURL,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = body
+        })
+    end)
+
+    if not suc then
+        Notify("Erro", "Falha ao enviar webhook.")
+    end
+end
 
 
 -------------------------------------------------------
---  SEÇÃO: SUGESTÃO (SEM NOTA)
+--  SEÇÃO: SUGESTÃO  (SEM NOTA)
 -------------------------------------------------------
 
 local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
@@ -1009,20 +1013,19 @@ sugestao:Space()
 sugestao:Button({
     Title = "Enviar",
     Callback = function()
-        if sugestaoBox.Value == "" then
+        if not sugestaoBox.Value or sugestaoBox.Value == "" then
             Notify("Erro", "Digite algo antes de enviar sua sugestão.")
             return
         end
 
-        EnviarWebhook(true, sugestaoBox.Value, nil, anonimatoSug)
+        EnviarPayload(true, sugestaoBox.Value, nil, anonimatoSug)
         Notify("Agradeço!", "Sugestão enviada.")
     end
 })
 
 
-
 -------------------------------------------------------
---  SEÇÃO: AVALIAÇÃO (COM NOTA)
+--  SEÇÃO: AVALIAÇÃO  (COM NOTA)
 -------------------------------------------------------
 
 local avaliar = Sugestoes:Section({ Title = "Avalie!" })
@@ -1058,17 +1061,17 @@ avaliar:Space()
 avaliar:Button({
     Title = "Enviar",
     Callback = function()
-        if avaliarBox.Value == "" then
+        if not avaliarBox.Value or avaliarBox.Value == "" then
             Notify("Erro", "Escreva sua avaliação antes de enviar.")
             return
         end
 
-        if avaliarNota == "" then
+        if not avaliarNota or avaliarNota == "" then
             Notify("Erro", "Selecione uma nota antes de enviar.")
             return
         end
 
-        EnviarWebhook(false, avaliarBox.Value, avaliarNota, anonimatoAval)
+        EnviarPayload(false, avaliarBox.Value, avaliarNota, anonimatoAval)
         Notify("Agradeço!", "Avaliação enviada.")
     end
 })
