@@ -914,96 +914,44 @@ local player = game:GetService("Players").LocalPlayer
 local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
 
 -- ======================================================
---  XOR SIMPLES
+--  CONFIG
 -- ======================================================
-local function xorStr(s, key)
-    local out = {}
-    for i=1,#s do
-        out[i] = string.char(bit32.bxor(s:byte(i), key))
-    end
-    return table.concat(out)
+
+local COOLDOWN_SUGESTAO  = 1800      -- 30 min
+local COOLDOWN_AVALIACAO = 21600     -- 6h
+
+-- Arquivo persistente para armazenar timestamps
+local fileName = "cooldowns_" .. tostring(HWID) .. ".json"
+
+local Saved = {
+    sugestao  = 0,
+    avaliacao = 0
+}
+
+-- ======================================================
+--  ARQUIVOS (LOAD / SAVE)
+-- ======================================================
+
+local function Save()
+    writefile(fileName, HttpService:JSONEncode(Saved))
 end
 
--- ======================================================
---  CHECKSUM (super simples)
--- ======================================================
-local function checksum(str)
-    local sum = 0
-    for i=1,#str do sum = (sum + str:byte(i)) % 9973 end
-    return tostring(sum)
-end
-
--- ======================================================
---  ARQUIVO DE COOLDOWN (nome entre 100–999)
--- ======================================================
-local filename = tostring(100 + (tonumber(HWID:byte(1)) % 900))
-local filepath = filename .. ".dat"
-
--- ======================================================
---  HONEYPOTS (persistentes)
--- ======================================================
-local honeyFolder = "honeypots_data"
-makefolder(honeyFolder)
-
-local honeyFiles = {}
-for i = 1, 5 do
-    local fname = honeyFolder .. "/" .. tostring(i)
-    honeyFiles[i] = fname
-
-    if not isfile(fname) then
-        local val = tostring(math.random(100000,999999))
-        writefile(fname, val .. "|" .. checksum(val))
-    end
-end
-
-local function validateHoneypots()
-    for i, path in ipairs(honeyFiles) do
-        if not isfile(path) then
-            return false
-        end
-        local data = readfile(path)
-        local v, chk = data:match("^(%d+)|(%d+)$")
-        if not v or chk ~= checksum(v) then
-            return false
-        end
-    end
-    return true
-end
-
-if not validateHoneypots() then
-    while true do end -- trava script se mexeram
-end
-
--- ======================================================
---  COOLDOWN PERSISTENTE
--- ======================================================
-local Saved = { sugestao = 0, avaliacao = 0 }
-local XOR_KEY = 52
-
-local function SaveCooldown()
-    local raw = HttpService:JSONEncode(Saved)
-    local enc = xorStr(raw, XOR_KEY)
-    local final = enc .. "|" .. checksum(enc)
-    writefile(filepath, final)
-end
-
-local function LoadCooldown()
-    if not isfile(filepath) then return end
-    local data = readfile(filepath)
-    local enc, chk = data:match("^(.-)|(%d+)$")
-    if not enc or chk ~= checksum(enc) then
-        -- dano → punição 24h
-        Saved.sugestao = os.time() + 86400
-        Saved.avaliacao = os.time() + 86400
-        SaveCooldown()
+local function Load()
+    if not isfile(fileName) then
+        Save()
         return
     end
-    local dec = xorStr(enc, XOR_KEY)
-    local ok, tb = pcall(function() return HttpService:JSONDecode(dec) end)
-    if ok then Saved = tb end
+    
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(readfile(fileName))
+    end)
+
+    if ok and typeof(data) == "table" then
+        Saved = data
+    end
 end
 
-LoadCooldown()
+Load()
 
 -- ======================================================
 --  ENVIAR PARA WEBHOOK
@@ -1018,57 +966,32 @@ end
 
 local function EnviarPayload(isSug, texto, nota, anonimo)
     local hook = isSug and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
-    local who = anonimo and "Anônimo" or player.Name
-
-    local author = nil
-    local desc
-
-    if isSug then
-        desc = "\n> **" .. tostring(texto) .. "**\n\n"
-    else
-        author = { name = "Nota: " .. tostring(nota) .. "/10" }
-        desc = "Nota: **" .. tostring(nota) .. "/10**\n\n> **" .. tostring(texto) .. "**\n\n"
-    end
+    local nome = anonimo and "Anônimo" or player.Name
 
     local embed = {
-        id = math.random(100000,999999),
-        description = desc,
+        title = (isSug and "Sugestão feita por: " .. nome or "Avaliação feita por: " .. nome),
+        description = isSug 
+            and ("\n> **" .. texto .. "**\n")
+            or ("Nota: **" .. nota .. "/10**\n\n> **" .. texto .. "**\n"),
         timestamp = isoTimestamp(),
-        color = 14280458,
-        footer = { text = (isSug and "Sugestão enviada através do script" or "Avaliação feita através do script") },
-        author = author,
-        fields = {},
-        title = (isSug and "Sugestão feita por: " .. who or "Avaliação feita por: " .. who)
-    }
-
-    local body = {
-        content = "",
-        tts = false,
-        embeds = { embed },
-        components = {},
-        actions = {},
-        flags = 0,
-        username = isSug and "Sugestão" or "Avaliação"
+        color = 14280458
     }
 
     requestFunc({
         Url = hook,
         Method = "POST",
         Headers = { ["Content-Type"] = "application/json" },
-        Body = HttpService:JSONEncode(body)
+        Body = HttpService:JSONEncode({
+            username = isSug and "Sugestão" or "Avaliação",
+            embeds = { embed }
+        })
     })
 end
 
 -- ======================================================
---  UI + BOTÕES
+--  UI – SUGESTÃO
 -- ======================================================
 
-local COOLDOWN_SUGESTAO  = 1800
-local COOLDOWN_AVALIACAO = 21600
-
--------------------------------------------------------
--- SUGESTÃO
--------------------------------------------------------
 local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
 
 local anonimatoSug = false
@@ -1089,8 +1012,10 @@ sugestao:Button({
     Callback = function()
         local now = os.time()
 
+        -- COOLDOWN
         if now < Saved.sugestao then
-            Notify("Espere!", "Você só pode enviar outra sugestão em " .. (Saved.sugestao - now) .. " segundos.")
+            local rest = Saved.sugestao - now
+            Notify("Espere!", "Você só pode enviar outra sugestão em " .. rest .. " segundos.")
             return
         end
 
@@ -1099,17 +1024,19 @@ sugestao:Button({
             return
         end
 
+        -- Atualiza cooldown
         Saved.sugestao = now + COOLDOWN_SUGESTAO
-        SaveCooldown()
+        Save()
 
         EnviarPayload(true, sugestaoBox.Value, nil, anonimatoSug)
         Notify("Obrigado!", "Sugestão enviada.")
     end
 })
 
--------------------------------------------------------
--- AVALIAÇÃO
--------------------------------------------------------
+-- ======================================================
+--  UI – AVALIAÇÃO
+-- ======================================================
+
 local avaliar = Sugestoes:Section({ Title = "Avalie!" })
 
 local anonimatoAval = false
@@ -1122,7 +1049,7 @@ avaliar:Toggle({
 local avaliarNota = "10"
 avaliar:Dropdown({
     Title = "Nota",
-    Desc = "Escolha uma nota",
+    Desc = "Escolha a nota",
     Values = { "1","2","3","4","5","6","7","8","9","10" },
     Value = "10",
     Callback = function(v) avaliarNota = v end
@@ -1139,8 +1066,10 @@ avaliar:Button({
     Callback = function()
         local now = os.time()
 
+        -- COOLDOWN
         if now < Saved.avaliacao then
-            Notify("Espere!", "Você só pode enviar outra avaliação em " .. (Saved.avaliacao - now) .. " segundos.")
+            local rest = Saved.avaliacao - now
+            Notify("Espere!", "Você só pode enviar outra avaliação em " .. rest .. " segundos.")
             return
         end
 
@@ -1149,8 +1078,9 @@ avaliar:Button({
             return
         end
 
+        -- Atualiza cooldown
         Saved.avaliacao = now + COOLDOWN_AVALIACAO
-        SaveCooldown()
+        Save()
 
         EnviarPayload(false, avaliarBox.Value, avaliarNota, anonimatoAval)
         Notify("Obrigado!", "Avaliação enviada.")
