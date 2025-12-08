@@ -858,135 +858,82 @@ end
 -- Auto JJ's
 -- =========================
 
------------------------------------------------------------------------
---  MÓDULO RemoteChat (MANTIDO EXATAMENTE COMO ENVIOU)
------------------------------------------------------------------------
+------------------------------------------------------------
+-- MÓDULO: CONVERTER NÚMEROS POR EXTENSO (COMPLETO + ACENTOS)
+------------------------------------------------------------
 
-local RemoteChat = {}
-local Connections = {}
-
-local WC = game.WaitForChild
-local FFC = game.FindFirstChild
-
-local Players = game:GetService("Players")
-local TextChatService = game:GetService("TextChatService")
-
-local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui", 95)
-
-local CurrentChannel
-local InputBar = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
-
-local Methods = {
-	[Enum.ChatVersion.LegacyChatService] = function(Message)
-		local ChatUI = PlayerGui:FindFirstChild("Chat")
-		
-		if CurrentChannel then
-			CurrentChannel:SendAsync(Message)
-		elseif ChatUI then
-			local ChatFrame = WC(ChatUI, "Frame", 95)
-			local CBPF = WC(ChatFrame, "ChatBarParentFrame", 95)
-
-			local Frame = WC(CBPF, "Frame", 95)
-			local BF = WC(Frame, "BoxFrame", 95)
-
-			local ChatFM = WC(BF, "Frame", 95)
-			local ChatBar = FFC(ChatFM, "ChatBar", 95)
-
-			ChatBar:CaptureFocus()
-			ChatBar.Text = Message
-			ChatBar:ReleaseFocus(true)
-		end
-	end,
-
-	[Enum.ChatVersion.TextChatService] = function(Message)
-		if CurrentChannel then
-			CurrentChannel:SendAsync(Message)
-		end
-	end,
+local accentMap = {
+    ["á"]="Á",["à"]="À",["ã"]="Ã",["â"]="Â",
+    ["é"]="É",["ê"]="Ê",
+    ["í"]="Í",
+    ["ó"]="Ó",["ô"]="Ô",["õ"]="Õ",
+    ["ú"]="Ú",
+    ["ç"]="Ç"
 }
 
-function RemoteChat:Send(Message)
-	pcall(Methods[TextChatService.ChatVersion], Message)
-end
-
-if InputBar then
-	table.insert(Connections, InputBar.Changed:Connect(function(Prop)
-		if Prop == "TargetTextChannel" and (typeof(InputBar.TargetTextChannel) == "Instance" and InputBar.TargetTextChannel:IsA("TextChannel")) then
-			CurrentChannel = InputBar.TargetTextChannel
-		end
-	end))
-	
-	if typeof(InputBar.TargetTextChannel) == "Instance" and InputBar.TargetTextChannel:IsA("TextChannel") then
-		CurrentChannel = InputBar.TargetTextChannel
-	end
-end
-
------------------------------------------------------------------------
---  CONVERSOR DE NÚMEROS POR EXTENSO (VERSÃO FINAL PERFEITA)
------------------------------------------------------------------------
-
-local function upper_accented(str)
-    local map = {
-        ["á"]="Á", ["à"]="À", ["â"]="Â", ["ã"]="Ã",
-        ["é"]="É", ["ê"]="Ê",
-        ["í"]="Í",
-        ["ó"]="Ó", ["ô"]="Ô", ["õ"]="Õ",
-        ["ú"]="Ú",
-        ["ç"]="Ç"
-    }
-    return (string.gsub(string.upper(str), ".", function(c)
-        return map[string.lower(c)] or c
-    end))
+local function unicodeUpper(str)
+    local out = {}
+    for _,c in utf8.codes(str) do
+        local ch = utf8.char(c)
+        out[#out+1] = accentMap[ch] or string.upper(ch)
+    end
+    return table.concat(out)
 end
 
 local units = {
-    "zero", "um", "dois", "três", "quatro", "cinco",
-    "seis", "sete", "oito", "nove", "dez", "onze",
-    "doze", "treze", "catorze", "quinze", "dezesseis",
-    "dezessete", "dezoito", "dezenove"
+    [0]="zero",[1]="um",[2]="dois",[3]="três",[4]="quatro",[5]="cinco",
+    [6]="seis",[7]="sete",[8]="oito",[9]="nove",[10]="dez",[11]="onze",
+    [12]="doze",[13]="treze",[14]="catorze",[15]="quinze",[16]="dezesseis",
+    [17]="dezessete",[18]="dezoito",[19]="dezenove"
 }
 
 local tens = {
-    [2] = "vinte", [3] = "trinta", [4] = "quarenta",
-    [5] = "cinquenta", [6] = "sessenta", [7] = "setenta",
-    [8] = "oitenta", [9] = "noventa"
+    [2]="vinte",[3]="trinta",[4]="quarenta",[5]="cinquenta",
+    [6]="sessenta",[7]="setenta",[8]="oitenta",[9]="noventa"
 }
 
 local hundreds = {
-    [1] = "cento", [2] = "duzentos", [3] = "trezentos",
-    [4] = "quatrocentos", [5] = "quinhentos", [6] = "seiscentos",
-    [7] = "setecentos", [8] = "oitocentos", [9] = "novecentos"
+    [1]="cento",[2]="duzentos",[3]="trezentos",[4]="quatrocentos",
+    [5]="quinhentos",[6]="seiscentos",[7]="setecentos",[8]="oitocentos",
+    [9]="novecentos"
 }
 
-local scales = {
-    [1] = "mil", [2] = "milhão", [3] = "bilhão",
-    [4] = "trilhão", [5] = "quatrilhão", [6] = "quintilhão",
-    [7] = "sextilhão",
+local scales_singular = {
+    [1]="mil",[2]="milhão",[3]="bilhão",[4]="trilhão",[5]="quatrilhão"
 }
 
 local scales_plural = {
-    [1] = "mil", [2] = "milhões", [3] = "bilhões",
-    [4] = "trilhões", [5] = "quatrilhões", [6] = "quintilhões",
-    [7] = "sextilhões",
+    [1]="mil",[2]="milhões",[3]="bilhões",[4]="trilhões",[5]="quatrilhões"
 }
 
 local function threeDigitToWords(n)
     if n == 0 then return "" end
     if n == 100 then return "cem" end
 
-    local h = math.floor(n / 100)
-    local t = math.floor((n % 100) / 10)
-    local u = n % 10
+    local h = math.floor(n/100)
+    local t = math.floor((n%100)/10)
+    local u = n%100
+
     local parts = {}
 
-    if h > 0 then table.insert(parts, hundreds[h]) end
+    if h > 0 then
+        table.insert(parts, hundreds[h])
+    end
 
-    if t == 1 then
-        table.insert(parts, units[t*10 + u])
+    if u < 20 and u >= 0 and u <= 19 then
+        if u > 0 or (h == 0 and t == 0) then
+            table.insert(parts, units[u])
+        end
     else
-        if t > 1 then table.insert(parts, tens[t]) end
-        if u > 0 then table.insert(parts, units[u]) end
+        local tens_digit = math.floor((n % 100) / 10)
+        local units_digit = n % 10
+
+        if tens_digit > 1 then
+            table.insert(parts, tens[tens_digit])
+        end
+        if units_digit > 0 then
+            table.insert(parts, units[units_digit])
+        end
     end
 
     return table.concat(parts, " e ")
@@ -1004,52 +951,39 @@ local function numberToPortugueseWords(num)
     end
 
     local parts = {}
-    for i = #groups, 1, -1 do
-        local g = groups[i]
-        if g ~= 0 then
-            local text = threeDigitToWords(g)
+
+    for i = #groups,1,-1 do
+        local val = groups[i]
+        if val ~= 0 then
+            local text = threeDigitToWords(val)
+
             if i > 1 then
-                local scaleName = (g == 1) and scales[i-1] or scales_plural[i-1]
-                if g == 1 and i == 2 then text = "mil"
-                else text = text .. " " .. scaleName end
+                local scale = (val == 1) and scales_singular[i-1] or scales_plural[i-1]
+
+                if (i == 2 and val == 1) then
+                    text = "mil"
+                else
+                    text = text.." "..scale
+                end
             end
+
             table.insert(parts, text)
         end
     end
 
-    local final = (#parts == 1) and parts[1] or table.concat(parts, " e ")
-    return upper_accented(final) .. "!"
+    local final = table.concat(parts, " e ")
+    return unicodeUpper(final).."!"
 end
 
------------------------------------------------------------------------
---  AUTO JJ SYSTEM
------------------------------------------------------------------------
+------------------------------------------------------------
+-- MÓDULO DE ENVIO DE CHAT (QUE VOCÊ ME ENVIOU)
+------------------------------------------------------------
+local RemoteChat = require(path_to_your_remotechat_module) 
+-- coloque o caminho correto!
 
-local running = false
-local inicio = 1
-local fim = 100
-local intervalo = 1.5
-
-local function sendChat(msg)
-	-- AGORA SEM PlaceId, usando apenas o módulo
-    RemoteChat:Send(msg)
-end
-
-local function startAutoJJ()
-    running = true
-    task.spawn(function()
-        for n = inicio, fim do
-            if not running then break end
-            sendChat(numberToPortugueseWords(n))
-            task.wait(intervalo)
-        end
-        running = false
-    end)
-end
-
------------------------------------------------------------------------
---  WINDUI INTEGRAÇÃO
------------------------------------------------------------------------
+------------------------------------------------------------
+-- AUTO JJ (WINDUI)
+------------------------------------------------------------
 
 do
     local Auto = ElementsSection:Tab({
@@ -1059,11 +993,26 @@ do
         IconShape = "Square",
     })
 
+    local running = false
+    local startValue = 1
+    local endValue = 100
+    local delayValue = 1.5
+
     Auto:Toggle({
         Title = "Auto JJ's",
         Callback = function(v)
             running = v
-            if v then startAutoJJ() end
+
+            if running then
+                task.spawn(function()
+                    for i = startValue, endValue do
+                        if not running then break end
+                        local msg = numberToPortugueseWords(i)
+                        RemoteChat:Send(msg)
+                        task.wait(delayValue)
+                    end
+                end)
+            end
         end
     })
 
@@ -1073,7 +1022,7 @@ do
         Title = "Início",
         Placeholder = "Ex: 1",
         Callback = function(v)
-            inicio = tonumber(v) or 1
+            startValue = tonumber(v) or 1
         end
     })
 
@@ -1083,7 +1032,7 @@ do
         Title = "Fim",
         Placeholder = "Ex: 100",
         Callback = function(v)
-            fim = tonumber(v) or 100
+            endValue = tonumber(v) or 100
         end
     })
 
@@ -1093,7 +1042,7 @@ do
         Title = "Intervalo (segundos)",
         Placeholder = "Ex: 1.5",
         Callback = function(v)
-            intervalo = tonumber(v) or 1.5
+            delayValue = tonumber(v) or 1.5
         end
     })
 
@@ -1104,7 +1053,9 @@ do
         Desc = "Qual tipo de JJ será feito?",
         Values = { "JJ (padrão)" },
         Value = "JJ (padrão)",
-        Callback = function(option) end
+        Callback = function(option)
+            -- sistema futuro caso queira outros estilos
+        end
     })
 end
 
