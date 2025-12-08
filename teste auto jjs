@@ -858,7 +858,6 @@ end
 -- Auto JJ's
 -- =========================
 
-
 -- chat 
 
 local RemoteChat = {}
@@ -962,6 +961,8 @@ end
 
 local Char = Character.new(Player)
 
+-- conversão
+
 local accentMap = {
     ["á"]="Á",["à"]="À",["ã"]="Ã",["â"]="Â",
     ["é"]="É",["ê"]="Ê",
@@ -1059,7 +1060,7 @@ local function numberToWords(num)
 end
 
 ---------------------------------------------------------------------
--- AUTO JJ'S — CONFIGURAÇÕES E GUI
+-- AUTO JJ'S - CONFIGURAÇÕES E UI
 ---------------------------------------------------------------------
 
 local running = false
@@ -1082,50 +1083,6 @@ local finishTotalTime = 60
 local suffix = "!"
 local customSuffix = ""
 
----------------------------------------------------------------------
--- Character system para pular
----------------------------------------------------------------------
-local Character = {}
-Character.__index = Character
-
-function Character.new(Player)
-    local self = setmetatable({}, Character)
-
-    self.Player = Player
-    self.Connections = {}
-
-    self.Character = Player.Character or Player.CharacterAdded:Wait()
-    self.Humanoid = self.Character:WaitForChild("Humanoid", 95)
-    self.Root = self.Character:WaitForChild("HumanoidRootPart", 95)
-
-    table.insert(self.Connections, Player.CharacterAdded:Connect(function(Char)
-        self.Character = Char
-        self.Humanoid = Char:WaitForChild("Humanoid", 95)
-        self.Root = Char:WaitForChild("HumanoidRootPart", 95)
-    end))
-
-    return self
-end
-
-function Character:Jump()
-    if not self.Humanoid then return end
-    self.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-end
-
-local Player = game:GetService("Players").LocalPlayer
-local Char = Character.new(Player)
-
----------------------------------------------------------------------
--- RemoteChat já definido por você
----------------------------------------------------------------------
-
--- RemoteChat:Send(msg) já existe e funciona, como você informou.
-
-
-
----------------------------------------------------------------------
--- ETA Paragraph será criado aqui dentro
----------------------------------------------------------------------
 
 do
     local Auto = ElementsSection:Tab({
@@ -1136,10 +1093,10 @@ do
     })
 
     ---------------------------------------------------------------------
-    -- Paragraph ETA
+    -- Tempo de finalização
     ---------------------------------------------------------------------
     local ETAParagraph = Auto:Paragraph({
-        Title = "ETA",
+        Title = "Tempo",
         Desc  = "Aguardando...",
         Color = "Blue",
         Image = "",
@@ -1150,10 +1107,10 @@ do
     })
 
     ---------------------------------------------------------------------
-    -- Atualiza o ETA
+    -- Atualiza
     ---------------------------------------------------------------------
     local function updateETA(remaining, secondsLeft)
-        ETAParagraph:SetTitle("ETA — Informações")
+        ETAParagraph:SetTitle("Tempo")
         ETAParagraph:SetDesc(
             string.format(
                 "Restando: %d JJ's\nTempo estimado: %.1f segundos",
@@ -1163,10 +1120,6 @@ do
         )
     end
 
-
-    ---------------------------------------------------------------------
-    -- TOGGLE PRINCIPAL
-    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Auto JJ's",
         Callback = function(v)
@@ -1216,19 +1169,15 @@ do
 
                         updateETA(remaining, countdown)
 
-                        ---------------------------------------------------------------------
                         -- MENSAGEM
-                        ---------------------------------------------------------------------
-                        local word = numberToWords(num)
 
+                        local word = numberToWords(num)
                         local finalSuffix = (customSuffix ~= "" and customSuffix) or suffix
                         local msg = spacingEnabled and (word .. " " .. finalSuffix) or (word .. finalSuffix)
 
                         RemoteChat:Send(msg)
 
-                        ---------------------------------------------------------------------
                         -- PULAR
-                        ---------------------------------------------------------------------
                         if jumpEnabled then
                             Char:Jump()
                         end
@@ -1262,10 +1211,6 @@ do
 
     Auto:Space()
 
-
-    ---------------------------------------------------------------------
-    -- Inputs padrão
-    ---------------------------------------------------------------------
     Auto:Input({
         Title = "Início",
         Placeholder = "Ex: 1",
@@ -1284,10 +1229,6 @@ do
 
     Auto:Space()
 
-
-    ---------------------------------------------------------------------
-    -- Intervalo fixo
-    ---------------------------------------------------------------------
     Auto:Input({
         Title = "Intervalo (segundos)",
         Placeholder = "Ex: 1.5",
@@ -1296,10 +1237,6 @@ do
         end
     })
 
-
-    ---------------------------------------------------------------------
-    -- Intervalo aleatório
-    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Intervalo aleatório",
         Desc  = "Usa intervalo entre mínimo e máximo.",
@@ -1326,10 +1263,6 @@ do
 
     Auto:Space()
 
-
-    ---------------------------------------------------------------------
-    -- FINALIZAR EM X SEGUNDOS
-    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Forçar finalizaçåo",
         Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
@@ -1348,10 +1281,6 @@ do
 
     Auto:Space()
 
-
-    ---------------------------------------------------------------------
-    -- Modo reverso
-    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Modo reverso",
         Desc  = "Conta de trás pra frente.",
@@ -1362,10 +1291,6 @@ do
 
     Auto:Space()
 
-
-    ---------------------------------------------------------------------
-    -- Outros
-    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Espaçamento",
         Desc = "UM ! em vez de UM!",
@@ -1384,10 +1309,6 @@ do
 
     Auto:Space()
 
-
-    ---------------------------------------------------------------------
-    -- Sufixos
-    ---------------------------------------------------------------------
     Auto:Dropdown({
         Title = "Sufixo",
         Values = { "!", "?", ".", ",", "/" },
