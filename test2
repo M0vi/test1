@@ -906,6 +906,162 @@ end
 -- =========================
 
 
+do
+local Sugestoes = Outros:Tab({
+    Title = "Sugestões",
+    Icon = "lucide:message-circle",
+    IconColor = Yellow
+})
+
+local HttpService = game:GetService("HttpService")
+local player = game:GetService("Players").LocalPlayer
+local requestFunc = syn and syn.request or request or http_request
+
+local WEBHOOK = "https://rbxhook.cc/r/8064e950aaaeffe552bb55c2c5c2e26c"
+
+-- avatar padrão discord
+local DEFAULT_AVATAR = "https://cdn.discordapp.com/embed/avatars/0.png"
+
+-- pega avatar Roblox real
+local function GetAvatar()
+    return "https://www.roblox.com/headshot-thumbnail/image?userId=" .. player.UserId .. "&width=420&height=420&format=png"
+end
+
+-- função que envia embed final
+local function EnviarWebhook(titulo, texto, nota, anonimo)
+    local username = anonimo and "Anônimo" or player.Name
+    local avatar = anonimo and DEFAULT_AVATAR or GetAvatar()
+
+    local bodyTable = {
+        content = "",
+        tts = false,
+        embeds = {
+            {
+                id = math.random(100000,999999),
+                description = "Nota: **" .. nota .. "**\n\n" .. titulo .. "\n> " .. texto,
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z"),
+                color = 14280458,
+                footer = {
+                    text = titulo .. " feita através do script"
+                },
+                author = {
+                    name = titulo
+                },
+                fields = {}
+            }
+        },
+        components = {},
+        actions = {},
+        flags = 0,
+        username = username,
+        avatar_url = avatar
+    }
+
+    local encoded = HttpService:JSONEncode(bodyTable)
+
+    requestFunc({
+        Url = WEBHOOK,
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = encoded
+    })
+end
+
+-------------------------------------------------------
+--  SEÇÃO: SUGESTÃO
+-------------------------------------------------------
+
+local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
+
+local anonimatoSug = false
+sugestao:Toggle({
+    Title = "Anonimato",
+    Default = false,
+    Callback = function(v)
+        anonimatoSug = v
+    end
+})
+
+local sugestaoNota = "1"
+sugestao:Dropdown({
+    Title = "Nota",
+    Desc = "Escolha uma nota",
+    Values = { "1","2","3","4","5","6","7","8","9","10" },
+    Value = "1",
+    Callback = function(v)
+        sugestaoNota = v
+    end
+})
+
+local sugestaoBox = sugestao:Input({
+    Title = "Sua sugestão",
+    Type = "Textarea",
+    Icon = "mouse",
+})
+
+sugestao:Space()
+
+sugestao:Button({
+    Title = "Enviar",
+    Callback = function()
+        if sugestaoBox.Value == "" or tostring(sugestaoNota) == "" then
+            Notify("Erro", "Preencha a nota e a sugestão antes de enviar.")
+            return
+        end
+
+        EnviarWebhook("Sugestão", sugestaoBox.Value, sugestaoNota, anonimatoSug)
+        Notify("Agradeço!", "Sugestão enviada.")
+    end
+})
+
+-------------------------------------------------------
+--  SEÇÃO: AVALIAÇÃO
+-------------------------------------------------------
+
+local avaliar = Sugestoes:Section({ Title = "Avalie!" })
+
+local anonimatoAval = false
+avaliar:Toggle({
+    Title = "Anonimato",
+    Default = false,
+    Callback = function(v)
+        anonimatoAval = v
+    end
+})
+
+local avaliarNota = "1"
+avaliar:Dropdown({
+    Title = "Nota",
+    Desc = "Escolha uma nota",
+    Values = { "1","2","3","4","5","6","7","8","9","10" },
+    Value = "1",
+    Callback = function(v)
+        avaliarNota = v
+    end
+})
+
+local avaliarBox = avaliar:Input({
+    Title = "Avaliação",
+    Type = "Textarea",
+    Icon = "mouse",
+})
+
+avaliar:Space()
+
+avaliar:Button({
+    Title = "Enviar",
+    Callback = function()
+        if avaliarBox.Value == "" or tostring(avaliarNota) == "" then
+            Notify("Erro", "Preencha a nota e a avaliação antes de enviar.")
+            return
+        end
+
+        EnviarWebhook("Avaliação", avaliarBox.Value, avaliarNota, anonimatoAval)
+        Notify("Agradeço!", "Avaliação enviada.")
+    end
+})
+
+end
 
 
 -- =========================
