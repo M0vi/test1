@@ -927,21 +927,27 @@ end
 local function EnviarPayload(isSuggestion, texto, nota, anonimo)
     local webhookURL = isSuggestion and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
 
-    -- quem aparece no title (nome ou Anônimo)
-    local who = anonimo and "Anônimo" or player.Name
+local who = anonimo and "Anônimo" or player.Name
 
-    -- author.name somente para avaliação (nota)
-    local authorObj = nil
-    if not isSuggestion then
-        authorObj = { name = "Nota: " .. tostring(nota) .. "/10" }
-    end
+local authorObj = nil
+if not isSuggestion then
+    authorObj = { name = "Nota: " .. tostring(nota) .. "/10" }
+end
 
-    -- descrição formatada conforme seu exemplo
-    local descricao = "\n> **" .. tostring(texto) .. "**\n\n"
+local descricao
 
-    -- título agora exatamente: "Sugestão feita por: <who>" ou "Avaliação feita por: <who>"
-    local embedTitle = (isSuggestion and ("Sugestão feita por: " .. who) or ("Avaliação feita por: " .. who))
+if isSuggestion then
+    descricao = "\n> **" .. tostring(texto) .. "**\n\n"
+else
+    descricao = "Nota: **" .. tostring(nota) .. "/10**\n\n> **" .. tostring(texto) .. "**\n\n"
+end
 
+local embedTitle = (
+    isSuggestion 
+        and ("Sugestão feita por: " .. who) 
+        or  ("Avaliação feita por: " .. who)
+)
+    
     local embed = {
         id = math.random(100000,999999),
         description = descricao,
@@ -985,10 +991,6 @@ local function EnviarPayload(isSuggestion, texto, nota, anonimo)
         Notify("Erro", "Falha ao enviar webhook.")
     end
 end
-
--- (o restante das suas seções SUGESTÃO / AVALIAÇÃO permanece o mesmo)
-end
-
 
 -------------------------------------------------------
 --  SEÇÃO: SUGESTÃO  (SEM NOTA)
