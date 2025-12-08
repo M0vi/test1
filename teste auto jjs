@@ -770,7 +770,7 @@ do
         end
     end
 
-    Players_local.PlayerAdded:Connect(function(plr)
+    Players.PlayerAdded:Connect(function(plr)
         plr.CharacterAdded:Connect(function()
             task.wait(1)
             if HitboxEnabled then ApplyHitbox(plr) end
