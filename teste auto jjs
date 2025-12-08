@@ -853,6 +853,90 @@ local SectionESP = TabB:Section({
     })
 end
 
+
+-- =========================
+-- Auto JJ's
+-- =========================
+
+do
+    local Auto = ElementsSection:Tab({
+        Title = "Auto JJ's",
+        Icon = "geist:play",
+        IconColor = Purple,
+        IconShape = "Square",
+    })
+
+Auto:Toggle({
+        Title = "Auto JJ's",
+        Callback = function(v)
+-- ativa / desativa o Auto JJ's
+        end
+    })
+Auto:Space()
+
+Auto:Paragraph({
+        Title = "Início",
+        Desc = "Em qual número o JJ deve começar?",
+    })
+Auto:Space()
+
+Auto:Input({
+        Title = "Início",
+        Placeholder = "Ex: 1",
+        Callback = function(v)
+    -- aqui é onde vai começar o JJ
+        end
+    })
+Auto:Space()
+
+Auto:Paragraph({
+        Title = "Fim",
+        Desc = "Em qual número o JJ deve finalizar?",
+    })
+Auto:Space()
+
+Auto:Input({
+        Title = "Fim",
+        Placeholder = "Ex: 100",
+        Callback = function(v)
+    -- aqui é onde vai terminar o JJ
+        end
+    })
+Auto:Space()
+
+Auto:Paragraph({
+        Title = "Intervalo",
+        Desc = "Tempo que leva de um JJ até outro, em segundos.",
+    })
+Auto:Space()
+
+Auto:Input({
+        Title = "Intervalo",
+        Placeholder = "Ex: 1.2",
+        Callback = function(v)
+    -- aqui é o intervalo entre cada JJ's
+        end
+    })
+Auto:Space()
+
+Auto:Paragraph({
+        Title = "Tipo de JJ",
+        Desc = "Qual tipo de JJ deve ser feito?",
+    })
+Auto:Space()
+
+Auto:Dropdown({
+    Title = "Tipo de JJ",
+    Desc = "Qual JJ será feito",
+    Values = { "JJ (padrão)" },
+    Value = "JJ (padrão)",
+    Callback = function(option) 
+    -- aqui será o estilo de JJ a ser feito
+    end
+})
+end
+
+
 -- =========================
 -- 10) DISCORD
 -- =========================
