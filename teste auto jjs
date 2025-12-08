@@ -156,7 +156,6 @@ do
 
     AboutSection:Section({
         Title = [[ 
-
 - Implementação do Auto JJ's
 - Diversas funções exclusivas
 - Melhoria na estética da UI
