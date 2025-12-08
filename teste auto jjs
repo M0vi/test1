@@ -858,6 +858,174 @@ end
 -- Auto JJ's
 -- =========================
 
+-----------------------------------------------------
+--  == Auto JJ's (LÓGICA) ==
+-----------------------------------------------------
+local units = {
+    [0] = "zero", [1] = "um", [2] = "dois", [3] = "três", [4] = "quatro",
+    [5] = "cinco", [6] = "seis", [7] = "sete", [8] = "oito", [9] = "nove",
+    [10] = "dez", [11] = "onze", [12] = "doze", [13] = "treze", [14] = "catorze",
+    [15] = "quinze", [16] = "dezesseis", [17] = "dezessete", [18] = "dezoito", [19] = "dezenove"
+}
+
+local tens = {
+    [2] = "vinte",
+    [3] = "trinta",
+    [4] = "quarenta",
+    [5] = "cinquenta",
+    [6] = "sessenta",
+    [7] = "setenta",
+    [8] = "oitenta",
+    [9] = "noventa"
+}
+
+local hundreds = {
+    [1] = "cento",
+    [2] = "duzentos",
+    [3] = "trezentos",
+    [4] = "quatrocentos",
+    [5] = "quinhentos",
+    [6] = "seiscentos",
+    [7] = "setecentos",
+    [8] = "oitocentos",
+    [9] = "novecentos"
+}
+
+local scales = {
+    [1] = "mil",
+    [2] = "milhão",
+    [3] = "bilhão",
+    [4] = "trilhão",
+    [5] = "quatrilhão",
+    [6] = "quintilhão",
+    [7] = "sextilhão",
+}
+
+local scales_plural = {
+    [1] = "mil",
+    [2] = "milhões",
+    [3] = "bilhões",
+    [4] = "trilhões",
+    [5] = "quatrilhões",
+    [6] = "quintilhões",
+    [7] = "sextilhões",
+}
+
+local accentMap = {
+    ["á"] = "Á", ["à"] = "À", ["ã"] = "Ã", ["â"] = "Â",
+    ["é"] = "É", ["ê"] = "Ê",
+    ["í"] = "Í",
+    ["ó"] = "Ó", ["ô"] = "Ô", ["õ"] = "Õ",
+    ["ú"] = "Ú",
+    ["ç"] = "Ç",
+}
+
+local function unicodeUpper(str)
+    local result = {}
+
+    for _, c in utf8.codes(str) do
+        local ch = utf8.char(c)
+        result[#result+1] = accentMap[ch] or string.upper(ch)
+    end
+
+    return table.concat(result)
+end
+
+local function threeDigitToWords(n)
+    if n == 0 then return "" end
+    if n == 100 then return "cem" end
+
+    local h = math.floor(n / 100)
+    local t = math.floor((n % 100) / 10)
+    local u = n % 10
+    local parts = {}
+
+    if h > 0 then
+        table.insert(parts, hundreds[h])
+    end
+
+    if t == 1 then
+        table.insert(parts, units[10 + u])
+    else
+        if t > 1 then
+            table.insert(parts, tens[t])
+        end
+        if u > 0 then
+            table.insert(parts, units[u])
+        end
+    end
+
+    return table.concat(parts, " e ")
+end
+
+local function numberToPortugueseWords(num)
+    local original = tonumber(num)
+    if not original then return "NÚMERO INVÁLIDO!" end
+    if original == 0 then return "ZERO!" end
+
+    local n = original
+    local groups = {}
+    while n > 0 do
+        table.insert(groups, n % 1000)
+        n = math.floor(n / 1000)
+    end
+
+    local parts = {}
+    for i = #groups, 1, -1 do
+        local g = groups[i]
+        if g ~= 0 then
+            local text = threeDigitToWords(g)
+
+            if i > 1 then
+                local scaleName = (g == 1) and scales[i-1] or scales_plural[i-1]
+                if g == 1 and i == 2 then
+                    text = "mil"
+                else
+                    text = text .. " " .. scaleName
+                end
+            end
+
+            table.insert(parts, text)
+        end
+    end
+
+    local final = (#parts == 1) and parts[1] or table.concat(parts, " e ")
+
+    return unicodeUpper(final) .. "!"
+end
+
+local runJJ = false
+local startJJ = 1
+local endJJ = 100
+local intervalJJ = 1.5
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local function sendChatMessage(msg)
+    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg, "All")
+end
+
+local function autoJJLoop()
+    task.spawn(function()
+        while runJJ do
+            for i = startJJ, endJJ do
+                if not runJJ then break end
+
+                local msg = numberToPortugueseWords(i)
+                sendChatMessage(msg)
+
+                task.wait(intervalJJ)
+            end
+
+            runJJ = false
+        end
+    end)
+end
+
+-----------------------------------------------------
+--  === Auto JJ's (UI) ===
+-----------------------------------------------------
 do
     local Auto = ElementsSection:Tab({
         Title = "Auto JJ's",
@@ -866,50 +1034,57 @@ do
         IconShape = "Square",
     })
 
-Auto:Toggle({
+    Auto:Toggle({
         Title = "Auto JJ's",
         Callback = function(v)
--- ativa / desativa o Auto JJ's
+            runJJ = v
+            if v then
+                autoJJLoop()
+            end
         end
     })
-Auto:Space()
 
-Auto:Input({
+    Auto:Space()
+
+    Auto:Input({
         Title = "Início",
         Placeholder = "Ex: 1",
         Callback = function(v)
-    -- aqui é onde vai começar o JJ
+            startJJ = tonumber(v) or 1
         end
     })
-Auto:Space()
 
-Auto:Input({
+    Auto:Space()
+
+    Auto:Input({
         Title = "Fim",
         Placeholder = "Ex: 100",
         Callback = function(v)
-    -- aqui é onde vai terminar o JJ
+            endJJ = tonumber(v) or 100
         end
     })
-Auto:Space()
 
-Auto:Input({
+    Auto:Space()
+
+    Auto:Input({
         Title = "Intervalo (segundos)",
-        Placeholder = "Ex: 1.2",
+        Placeholder = "Ex: 1.5",
         Callback = function(v)
-    -- aqui é o intervalo entre cada JJ's
+            intervalJJ = tonumber(v) or 1.5
         end
     })
-Auto:Space()
 
-Auto:Dropdown({
-    Title = "Estilo de JJ",
-    Desc = "Qual tipo de JJ será feito?",
-    Values = { "JJ (padrão)" },
-    Value = "JJ (padrão)",
-    Callback = function(option) 
-    -- aqui será o estilo de JJ a ser feito
-    end
-})
+    Auto:Space()
+
+    Auto:Dropdown({
+        Title = "Estilo de JJ",
+        Desc = "Qual tipo de JJ será feito?",
+        Values = { "JJ (padrão)" },
+        Value = "JJ (padrão)",
+        Callback = function(option)
+            -- reservado caso você queira estilos no futuro
+        end
+    })
 end
 
 
