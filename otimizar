@@ -1,9 +1,3 @@
--- =================================================================================
--- SCRIPT OTIMIZADO: EXÉRCITO BRASILEIRO (Auto JJ's)
--- Otimizações: Uso de RunService.Heartbeat para Kill Aura e ESP, refatoração de variáveis, 
--- e melhor controle do ciclo de vida das conexões.
--- =================================================================================
-
 loadstring(game:HttpGet("https://raw.githubusercontent.com/M0vi/k/refs/heads/main/k"))()
 --logs 
 
@@ -145,27 +139,23 @@ do
         IconColor = Yellow
     })
 
-    local AboutSection = AboutTab:Section({
-        Title = "Main Loader",
-    })
-
-    AboutSection:Image({
+    AboutTab:Image({
         Image = "https://i.pinimg.com/736x/6f/71/8d/6f718d8dab224534767176f4da2fdf0e.jpg",
         AspectRatio = "4:3",
         Radius = 9, 
     })
 
-    AboutSection:Space({ Columns = 3 })
+    AboutTab:Space({ Columns = 3 })
 
-    AboutSection:Section({
+    AboutTab:Section({
         Title = "Changelogs:",
         TextSize = 30,
         FontWeight = Enum.FontWeight.SemiBold,
     })
 
-    AboutSection:Space()
+    AboutTab:Space()
 
-    AboutSection:Section({
+    AboutTab:Section({
         Title = [[ 
 - Implementação do Auto JJ's
 - Diversas funções exclusivas
