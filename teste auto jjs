@@ -858,9 +858,73 @@ end
 -- Auto JJ's
 -- =========================
 
------------------------------------------------------
---  == Auto JJ's (LÓGICA) ==
------------------------------------------------------
+-----------------------------------------------------------------------
+--  MÓDULO RemoteChat (MANTIDO EXATAMENTE COMO ENVIOU)
+-----------------------------------------------------------------------
+
+local RemoteChat = {}
+local Connections = {}
+
+local WC = game.WaitForChild
+local FFC = game.FindFirstChild
+
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui", 95)
+
+local CurrentChannel
+local InputBar = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
+
+local Methods = {
+	[Enum.ChatVersion.LegacyChatService] = function(Message)
+		local ChatUI = PlayerGui:FindFirstChild("Chat")
+		
+		if CurrentChannel then
+			CurrentChannel:SendAsync(Message)
+		elseif ChatUI then
+			local ChatFrame = WC(ChatUI, "Frame", 95)
+			local CBPF = WC(ChatFrame, "ChatBarParentFrame", 95)
+
+			local Frame = WC(CBPF, "Frame", 95)
+			local BF = WC(Frame, "BoxFrame", 95)
+
+			local ChatFM = WC(BF, "Frame", 95)
+			local ChatBar = FFC(ChatFM, "ChatBar", 95)
+
+			ChatBar:CaptureFocus()
+			ChatBar.Text = Message
+			ChatBar:ReleaseFocus(true)
+		end
+	end,
+
+	[Enum.ChatVersion.TextChatService] = function(Message)
+		if CurrentChannel then
+			CurrentChannel:SendAsync(Message)
+		end
+	end,
+}
+
+function RemoteChat:Send(Message)
+	pcall(Methods[TextChatService.ChatVersion], Message)
+end
+
+if InputBar then
+	table.insert(Connections, InputBar.Changed:Connect(function(Prop)
+		if Prop == "TargetTextChannel" and (typeof(InputBar.TargetTextChannel) == "Instance" and InputBar.TargetTextChannel:IsA("TextChannel")) then
+			CurrentChannel = InputBar.TargetTextChannel
+		end
+	end))
+	
+	if typeof(InputBar.TargetTextChannel) == "Instance" and InputBar.TargetTextChannel:IsA("TextChannel") then
+		CurrentChannel = InputBar.TargetTextChannel
+	end
+end
+
+-----------------------------------------------------------------------
+--  CONVERSOR DE NÚMEROS POR EXTENSO (VERSÃO FINAL PERFEITA)
+-----------------------------------------------------------------------
 
 local function upper_accented(str)
     local map = {
@@ -884,45 +948,26 @@ local units = {
 }
 
 local tens = {
-    [2] = "vinte",
-    [3] = "trinta",
-    [4] = "quarenta",
-    [5] = "cinquenta",
-    [6] = "sessenta",
-    [7] = "setenta",
-    [8] = "oitenta",
-    [9] = "noventa"
+    [2] = "vinte", [3] = "trinta", [4] = "quarenta",
+    [5] = "cinquenta", [6] = "sessenta", [7] = "setenta",
+    [8] = "oitenta", [9] = "noventa"
 }
 
 local hundreds = {
-    [1] = "cento",
-    [2] = "duzentos",
-    [3] = "trezentos",
-    [4] = "quatrocentos",
-    [5] = "quinhentos",
-    [6] = "seiscentos",
-    [7] = "setecentos",
-    [8] = "oitocentos",
-    [9] = "novecentos"
+    [1] = "cento", [2] = "duzentos", [3] = "trezentos",
+    [4] = "quatrocentos", [5] = "quinhentos", [6] = "seiscentos",
+    [7] = "setecentos", [8] = "oitocentos", [9] = "novecentos"
 }
 
 local scales = {
-    [1] = "mil",
-    [2] = "milhão",
-    [3] = "bilhão",
-    [4] = "trilhão",
-    [5] = "quatrilhão",
-    [6] = "quintilhão",
+    [1] = "mil", [2] = "milhão", [3] = "bilhão",
+    [4] = "trilhão", [5] = "quatrilhão", [6] = "quintilhão",
     [7] = "sextilhão",
 }
 
 local scales_plural = {
-    [1] = "mil",
-    [2] = "milhões",
-    [3] = "bilhões",
-    [4] = "trilhões",
-    [5] = "quatrilhões",
-    [6] = "quintilhões",
+    [1] = "mil", [2] = "milhões", [3] = "bilhões",
+    [4] = "trilhões", [5] = "quatrilhões", [6] = "quintilhões",
     [7] = "sextilhões",
 }
 
@@ -935,19 +980,13 @@ local function threeDigitToWords(n)
     local u = n % 10
     local parts = {}
 
-    if h > 0 then
-        table.insert(parts, hundreds[h])
-    end
+    if h > 0 then table.insert(parts, hundreds[h]) end
 
     if t == 1 then
         table.insert(parts, units[t*10 + u])
     else
-        if t > 1 then
-            table.insert(parts, tens[t])
-        end
-        if u > 0 then
-            table.insert(parts, units[u])
-        end
+        if t > 1 then table.insert(parts, tens[t]) end
+        if u > 0 then table.insert(parts, units[u]) end
     end
 
     return table.concat(parts, " e ")
@@ -965,30 +1004,25 @@ local function numberToPortugueseWords(num)
     end
 
     local parts = {}
-
     for i = #groups, 1, -1 do
         local g = groups[i]
         if g ~= 0 then
             local text = threeDigitToWords(g)
             if i > 1 then
                 local scaleName = (g == 1) and scales[i-1] or scales_plural[i-1]
-                if g == 1 and i == 2 then
-                    text = "mil"
-                else
-                    text = text .. " " .. scaleName
-                end
+                if g == 1 and i == 2 then text = "mil"
+                else text = text .. " " .. scaleName end
             end
             table.insert(parts, text)
         end
     end
 
     local final = (#parts == 1) and parts[1] or table.concat(parts, " e ")
-
     return upper_accented(final) .. "!"
 end
 
 -----------------------------------------------------------------------
---  Chat
+--  AUTO JJ SYSTEM
 -----------------------------------------------------------------------
 
 local running = false
@@ -997,46 +1031,24 @@ local fim = 100
 local intervalo = 1.5
 
 local function sendChat(msg)
-    local place = game.PlaceId
-
-    if place == 13132367906 then
-        local args = { msg }
-        game:GetService("ReplicatedStorage")
-            :WaitForChild("Assets")
-            :WaitForChild("Remotes")
-            :WaitForChild("ServerCommands")
-            :FireServer(unpack(args))
-
-    else
-        local TextChatService = game:GetService("TextChatService")
-
-        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-            TextChatService.TextChannels.RBXGeneral:SendAsync(msg)
-        else
-            game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg, "All")
-        end
-    end
+	-- AGORA SEM PlaceId, usando apenas o módulo
+    RemoteChat:Send(msg)
 end
 
 local function startAutoJJ()
     running = true
-    
     task.spawn(function()
         for n = inicio, fim do
             if not running then break end
-            
-            local mensagem = numberToPortugueseWords(n)
-            sendChat(mensagem)
-
+            sendChat(numberToPortugueseWords(n))
             task.wait(intervalo)
         end
-
         running = false
     end)
 end
 
 -----------------------------------------------------------------------
---  Auto JJ's (UI)
+--  WINDUI INTEGRAÇÃO
 -----------------------------------------------------------------------
 
 do
@@ -1051,9 +1063,7 @@ do
         Title = "Auto JJ's",
         Callback = function(v)
             running = v
-            if v then
-                startAutoJJ()
-            end
+            if v then startAutoJJ() end
         end
     })
 
@@ -1094,12 +1104,9 @@ do
         Desc = "Qual tipo de JJ será feito?",
         Values = { "JJ (padrão)" },
         Value = "JJ (padrão)",
-        Callback = function(option) 
-            -- Preparado para estilos no futuro
-        end
+        Callback = function(option) end
     })
 end
-
 
 -- =========================
 -- 10) DISCORD
