@@ -1059,13 +1059,23 @@ end
 -- AUTO JJ'S — CONFIGURAÇÕES E GUI
 ---------------------------------------------------------------------
 
+---------------------------------------------------------------------
+-- AUTO JJ'S — CONFIGURAÇÕES E GUI
+---------------------------------------------------------------------
+
 local running = false
 local startValue = 1
 local endValue   = 100
-local delayValue = 1.5
+
+local delayValue = 1.5              -- intervalo fixo
+local randomDelayEnabled = false    -- toggle novo
+local randomMin = 1                 -- min novo
+local randomMax = 3                 -- max novo
 
 local jumpEnabled = true
 local spacingEnabled = false
+
+local reverseEnabled = false        -- toggle novo (ordem reversa)
 
 local suffix = "!"
 local customSuffix = ""
@@ -1085,12 +1095,24 @@ do
 
             if running then
                 task.spawn(function()
-                    for i = startValue, endValue do
+
+                    local i = startValue
+                    local limit = endValue
+                    local step = 1
+
+                    -- modo reverso
+                    if reverseEnabled then
+                        i = endValue
+                        limit = startValue
+                        step = -1
+                    end
+
+                    for num = i, limit, step do
                         if not running then break end
 
-                        local word = numberToWords(i)
+                        local word = numberToWords(num)
 
-                        local finalSuffix = customSuffix ~= "" and customSuffix or suffix
+                        local finalSuffix = (customSuffix ~= "" and customSuffix) or suffix
                         local msg = spacingEnabled and (word .. " " .. finalSuffix) or (word .. finalSuffix)
 
                         RemoteChat:Send(msg)
@@ -1099,7 +1121,18 @@ do
                             Char:Jump()
                         end
 
-                        task.wait(delayValue)
+                        -- intervalo aleatório
+                        if randomDelayEnabled then
+                            local steps = math.floor((randomMax - randomMin) / 0.1)
+                            if steps < 0 then steps = 0 end
+
+                            local randStep = math.random(0, steps)
+                            local delay = randomMin + (randStep * 0.1)
+
+                            task.wait(delay)
+                        else
+                            task.wait(delayValue)
+                        end
                     end
                 end)
             end
@@ -1124,6 +1157,12 @@ do
         end
     })
 
+    Auto:Space()
+
+    -------------------------------------------------------------
+    -- INTERVALO FIXO
+    -------------------------------------------------------------
+
     Auto:Input({
         Title = "Intervalo (segundos)",
         Placeholder = "Ex: 1.5",
@@ -1132,11 +1171,53 @@ do
         end
     })
 
+    -------------------------------------------------------------
+    -- INTERVALO ALEATÓRIO (NOVO)
+    -------------------------------------------------------------
+
+    Auto:Toggle({
+        Title = "Intervalos aleatórios",
+        Desc  = "Escolhe um intervalo entre mínimo e máximo",
+        Callback = function(v)
+            randomDelayEnabled = v
+        end
+    })
+
+    Auto:Input({
+        Title = "Mínimo",
+        Placeholder = "Ex: 1",
+        Callback = function(v)
+            randomMin = tonumber(v) or 1
+        end
+    })
+
+    Auto:Input({
+        Title = "Máximo",
+        Placeholder = "Ex: 3",
+        Callback = function(v)
+            randomMax = tonumber(v) or 3
+        end
+    })
+
     Auto:Space()
 
-    -----------------------------------------------------------------
-    -- NOVOS TOGGLES
-    -----------------------------------------------------------------
+    -------------------------------------------------------------
+    -- MODO REVERSO (NOVO)
+    -------------------------------------------------------------
+
+    Auto:Toggle({
+        Title = "Modo reverso",
+        Desc  = "Vai do Fim → Início (ex: CEM! NOVENTA E NOVE!...)",
+        Callback = function(v)
+            reverseEnabled = v
+        end
+    })
+
+    Auto:Space()
+
+    -------------------------------------------------------------
+    -- OUTROS
+    -------------------------------------------------------------
 
     Auto:Toggle({
         Title = "Espaçamento",
@@ -1156,10 +1237,6 @@ do
 
     Auto:Space()
 
-    -----------------------------------------------------------------
-    -- SUFIXO PADRÃO
-    -----------------------------------------------------------------
-
     Auto:Dropdown({
         Title = "Sufixo",
         Values = { "!", "?", ".", ",", "/" },
@@ -1168,10 +1245,6 @@ do
             suffix = v
         end
     })
-
-    -----------------------------------------------------------------
-    -- SUFIXO CUSTOMIZADO
-    -----------------------------------------------------------------
 
     Auto:Input({
         Title = "Sufixo customizado",
