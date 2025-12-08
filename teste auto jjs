@@ -858,10 +858,6 @@ end
 -- Auto JJ's
 -- =========================
 
----------------------------------------------------------------------
--- REMOTECHAT SCRIPT (mantido exatamente igual ao seu)
----------------------------------------------------------------------
-
 local RemoteChat = {}
 local Connections = {}
 
@@ -924,11 +920,6 @@ if InputBar then
     end
 end
 
-
----------------------------------------------------------------------
--- CHARACTER (transformado em script como pediu)
----------------------------------------------------------------------
-
 local Character = {}
 local TweenService = game:GetService("TweenService")
 
@@ -967,12 +958,6 @@ function Character:Jump()
 end
 
 local Char = Character.new(Player)
-
-
-
----------------------------------------------------------------------
--- CONVERSOR NÚMEROS → EXTENSO + CAPS + ACENTOS
----------------------------------------------------------------------
 
 local accentMap = {
     ["á"]="Á",["à"]="À",["ã"]="Ã",["â"]="Â",
@@ -1070,8 +1055,6 @@ local function numberToWords(num)
     return unicodeUpper(table.concat(parts, " e "))
 end
 
-
-
 ---------------------------------------------------------------------
 -- AUTO JJ'S — CONFIGURAÇÕES E GUI
 ---------------------------------------------------------------------
@@ -1081,7 +1064,7 @@ local startValue = 1
 local endValue   = 100
 local delayValue = 1.5
 
-local jumpEnabled = false
+local jumpEnabled = true
 local spacingEnabled = false
 
 local suffix = "!"
@@ -1157,7 +1140,7 @@ do
 
     Auto:Toggle({
         Title = "Espaçamento",
-        Desc = "Coloca espaço antes do sufixo (UM !)",
+        Desc = "Separa o sufixo do número. (Ex: UM !)",
         Callback = function(v)
             spacingEnabled = v
         end
@@ -1192,7 +1175,7 @@ do
 
     Auto:Input({
         Title = "Sufixo customizado",
-        Placeholder = "Ex: !",
+        Placeholder = "Ex: @",
         Callback = function(v)
             customSuffix = tostring(v or "")
         end
