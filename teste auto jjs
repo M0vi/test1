@@ -954,7 +954,19 @@ function Character:ChangeHumanoidState(stateEnum)
 end
 
 function Character:Jump()
-	return self:ChangeHumanoidState(Enum.HumanoidStateType.Jumping)
+	if not self.Humanoid then return false end
+	
+	local state = self.Humanoid:GetState()
+	
+	-- Só permite pular se o estado mostrar que está no chão
+	if state == Enum.HumanoidStateType.Running
+	or state == Enum.HumanoidStateType.RunningNoPhysics
+	or state == Enum.HumanoidStateType.Landed then
+	
+		return self:ChangeHumanoidState(Enum.HumanoidStateType.Jumping)
+	end
+	
+	return false
 end
 
 local Char = Character.new(Player)
