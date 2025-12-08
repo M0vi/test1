@@ -1087,7 +1087,7 @@ local customSuffix = ""
 do
     local Auto = ElementsSection:Tab({
         Title = "Auto JJ's",
-        Icon = "geist:play",
+        Icon = "solar:game-icons:jumping-rope",
         IconColor = Purple,
         IconShape = "Square",
     })
@@ -1098,7 +1098,7 @@ do
     local ETAParagraph = Auto:Paragraph({
         Title = "Tempo",
         Desc  = "Aguardando...",
-        Color = "Blue",
+        Color = "Green",
         Image = "",
         ImageSize = 0,
         Thumbnail = "",
