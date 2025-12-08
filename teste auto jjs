@@ -1254,7 +1254,7 @@ JJs:Toggle({
 JJs:Space()
 
 JJs:Toggle({
-        Title = "Forçar finalizaçåo",
+        Title = "Intervalo inteligente",
         Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
         Callback = function(v)
             finishInTimeEnabled = v
