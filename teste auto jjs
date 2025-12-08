@@ -387,7 +387,6 @@ do
         Title = "Mods",
         Icon = "geist:robot",
         IconColor = Blue,
-        IconShape = "Square",
     })
 
     -----------------------------------------------------------
@@ -626,8 +625,7 @@ do
     local TabB = ElementsSection:Tab({
         Title = "Hitbox",
         Icon = "lucide:person-standing",
-        IconColor = Green,
-        IconShape = "Square",
+        IconColor = Green
     })
 
     local SectionHitbox = TabB:Section({
