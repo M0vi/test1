@@ -912,24 +912,50 @@ end
 do
 local Sugestoes = Outros:Tab({
     Title = "Sugestōes",
-    Icon = "geist:logo-discord",
-    IconColor = Blue
+    Icon = "lucide:message-circle",
+    IconColor = Yellow
 })
 
-Sugestoes:Input({
-        Title = "Input Textarea",
+local sugestao = Sugestoes:Section({
+        Title = "Sugestão? Envie-me!"
+    })
+
+sugestao:Input({
+        Title = "Sugestão",
         Type = "Textarea",
         Icon = "mouse",
     })
-Sugestoes:Space()
+sugestao:Space()
 
-Sugestoes:Button({
-        Title = "Enviar sugestão",
+sugestao:Button({
+        Title = "Enviar",
         Callback = function()
             Notify("Agradeço!", "Sugestão enviada.")
         end
     })
+sugestao:Space()
+
+-- avaliar
+
+local avaliar = Sugestoes:Section({
+        Title = "Avalie!"
+    })
+
+avaliar:Input({
+        Title = "Avalie o script!",
+        Type = "Textarea",
+        Icon = "mouse",
+    })
+avaliar:Space()
+
+avaliar:Button({
+        Title = "Enviar",
+        Callback = function()
+            Notify("Agradeço!", "Avaliação enviada.")
+        end
+    })
 end
+
 
 -- =========================
 -- 12) ICONS
