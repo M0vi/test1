@@ -908,9 +908,7 @@ end
 do
 local Sugestoes = Outros:Tab({ Title = "Sugestões", Icon = "lucide:message-circle", IconColor = Yellow })
 
-local HttpService = game:GetService("HttpService")
 local requestFunc = syn and syn.request or request or http_request
-local player = game:GetService("Players").LocalPlayer
 local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
 
 -- ======================================================
@@ -921,7 +919,7 @@ local COOLDOWN_SUGESTAO  = 1800      -- 30 min
 local COOLDOWN_AVALIACAO = 21600     -- 6h
 
 -- Arquivo persistente para armazenar timestamps
-local fileName = "cooldowns_" .. tostring(HWID) .. ".json"
+local fileName = "v" .. tostring(HWID) .. ".json"
 
 local Saved = {
     sugestao  = 0,
@@ -929,7 +927,7 @@ local Saved = {
 }
 
 -- ======================================================
---  ARQUIVOS (LOAD / SAVE)
+--  ARQUIVOS
 -- ======================================================
 
 local function Save()
@@ -989,7 +987,7 @@ local function EnviarPayload(isSug, texto, nota, anonimo)
 end
 
 -- ======================================================
---  UI – SUGESTÃO
+--  SUGESTÃO
 -- ======================================================
 
 local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
@@ -1024,7 +1022,7 @@ sugestao:Button({
             return
         end
 
-        -- Atualiza cooldown
+        -- atualiza i cooldown
         Saved.sugestao = now + COOLDOWN_SUGESTAO
         Save()
 
@@ -1034,7 +1032,7 @@ sugestao:Button({
 })
 
 -- ======================================================
---  UI – AVALIAÇÃO
+--  AVALIAÇÃO
 -- ======================================================
 
 local avaliar = Sugestoes:Section({ Title = "Avalie!" })
@@ -1078,7 +1076,7 @@ avaliar:Button({
             return
         end
 
-        -- Atualiza cooldown
+        -- atualiza o cooldown
         Saved.avaliacao = now + COOLDOWN_AVALIACAO
         Save()
 
