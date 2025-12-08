@@ -1066,18 +1066,66 @@ local running = false
 local startValue = 1
 local endValue   = 100
 
-local delayValue = 1.5              -- intervalo fixo
-local randomDelayEnabled = false    -- toggle novo
-local randomMin = 1                 -- min novo
-local randomMax = 3                 -- max novo
+local delayValue = 1.5              
+local randomDelayEnabled = false    
+local randomMin = 1                 
+local randomMax = 3                
 
-local jumpEnabled = false           -- pular
-local spacingEnabled = false        -- separar
+local jumpEnabled = false           
+local spacingEnabled = false        
 
-local reverseEnabled = false        -- modo reverso
+local reverseEnabled = false        
+
+local finishInTimeEnabled = false
+local finishTotalTime = 60
 
 local suffix = "!"
 local customSuffix = ""
+
+---------------------------------------------------------------------
+-- Character system para pular
+---------------------------------------------------------------------
+local Character = {}
+Character.__index = Character
+
+function Character.new(Player)
+    local self = setmetatable({}, Character)
+
+    self.Player = Player
+    self.Connections = {}
+
+    self.Character = Player.Character or Player.CharacterAdded:Wait()
+    self.Humanoid = self.Character:WaitForChild("Humanoid", 95)
+    self.Root = self.Character:WaitForChild("HumanoidRootPart", 95)
+
+    table.insert(self.Connections, Player.CharacterAdded:Connect(function(Char)
+        self.Character = Char
+        self.Humanoid = Char:WaitForChild("Humanoid", 95)
+        self.Root = Char:WaitForChild("HumanoidRootPart", 95)
+    end))
+
+    return self
+end
+
+function Character:Jump()
+    if not self.Humanoid then return end
+    self.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+end
+
+local Player = game:GetService("Players").LocalPlayer
+local Char = Character.new(Player)
+
+---------------------------------------------------------------------
+-- RemoteChat já definido por você
+---------------------------------------------------------------------
+
+-- RemoteChat:Send(msg) já existe e funciona, como você informou.
+
+
+
+---------------------------------------------------------------------
+-- ETA Paragraph será criado aqui dentro
+---------------------------------------------------------------------
 
 do
     local Auto = ElementsSection:Tab({
@@ -1087,6 +1135,38 @@ do
         IconShape = "Square",
     })
 
+    ---------------------------------------------------------------------
+    -- Paragraph ETA
+    ---------------------------------------------------------------------
+    local ETAParagraph = Auto:Paragraph({
+        Title = "ETA",
+        Desc  = "Aguardando...",
+        Color = "Blue",
+        Image = "",
+        ImageSize = 0,
+        Thumbnail = "",
+        ThumbnailSize = 0,
+        Locked = false,
+    })
+
+    ---------------------------------------------------------------------
+    -- Atualiza o ETA
+    ---------------------------------------------------------------------
+    local function updateETA(remaining, secondsLeft)
+        ETAParagraph:SetTitle("ETA — Informações")
+        ETAParagraph:SetDesc(
+            string.format(
+                "Restando: %d JJ's\nTempo estimado: %.1f segundos",
+                remaining,
+                math.max(secondsLeft, 0)
+            )
+        )
+    end
+
+
+    ---------------------------------------------------------------------
+    -- TOGGLE PRINCIPAL
+    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Auto JJ's",
         Callback = function(v)
@@ -1105,9 +1185,40 @@ do
                         step = -1
                     end
 
+                    local totalJJ = math.abs(endValue - startValue) + 1
+
+                    local forcedDelay = nil
+                    local estimatedFinishTime = 0
+
+                    if finishInTimeEnabled then
+                        forcedDelay = finishTotalTime / totalJJ
+                        estimatedFinishTime = finishTotalTime
+                    end
+
+                    local executed = 0
+                    local countdown = estimatedFinishTime
+
                     for num = i, limit, step do
                         if not running then break end
 
+                        executed += 1
+                        local remaining = totalJJ - executed
+
+                        if finishInTimeEnabled then
+                            countdown = finishTotalTime - (executed * forcedDelay)
+                        else
+                            local avgDelay = randomDelayEnabled
+                                and ((randomMin + randomMax) / 2)
+                                or delayValue
+
+                            countdown = remaining * avgDelay
+                        end
+
+                        updateETA(remaining, countdown)
+
+                        ---------------------------------------------------------------------
+                        -- MENSAGEM
+                        ---------------------------------------------------------------------
                         local word = numberToWords(num)
 
                         local finalSuffix = (customSuffix ~= "" and customSuffix) or suffix
@@ -1115,8 +1226,19 @@ do
 
                         RemoteChat:Send(msg)
 
+                        ---------------------------------------------------------------------
+                        -- PULAR
+                        ---------------------------------------------------------------------
                         if jumpEnabled then
                             Char:Jump()
+                        end
+
+                        ---------------------------------------------------------------------
+                        -- INTERVALO
+                        ---------------------------------------------------------------------
+                        if finishInTimeEnabled and forcedDelay then
+                            task.wait(forcedDelay)
+                            continue
                         end
 
                         if randomDelayEnabled then
@@ -1131,6 +1253,8 @@ do
                             task.wait(delayValue)
                         end
                     end
+
+                    updateETA(0, 0)
                 end)
             end
         end
@@ -1138,6 +1262,10 @@ do
 
     Auto:Space()
 
+
+    ---------------------------------------------------------------------
+    -- Inputs padrão
+    ---------------------------------------------------------------------
     Auto:Input({
         Title = "Início",
         Placeholder = "Ex: 1",
@@ -1156,6 +1284,10 @@ do
 
     Auto:Space()
 
+
+    ---------------------------------------------------------------------
+    -- Intervalo fixo
+    ---------------------------------------------------------------------
     Auto:Input({
         Title = "Intervalo (segundos)",
         Placeholder = "Ex: 1.5",
@@ -1164,9 +1296,13 @@ do
         end
     })
 
+
+    ---------------------------------------------------------------------
+    -- Intervalo aleatório
+    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Intervalo aleatório",
-        Desc  = "Intervalo será escolhido aleatoriamente entre os valores mínimo e máximo.",
+        Desc  = "Usa intervalo entre mínimo e máximo.",
         Callback = function(v)
             randomDelayEnabled = v
         end
@@ -1190,9 +1326,35 @@ do
 
     Auto:Space()
 
+
+    ---------------------------------------------------------------------
+    -- FINALIZAR EM X SEGUNDOS
+    ---------------------------------------------------------------------
+    Auto:Toggle({
+        Title = "Forçar finalizaçåo",
+        Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
+        Callback = function(v)
+            finishInTimeEnabled = v
+        end
+    })
+
+    Auto:Input({
+        Title = "Tempo (segundos)",
+        Placeholder = "Ex: 100",
+        Callback = function(v)
+            finishTotalTime = tonumber(v) or 60
+        end
+    })
+
+    Auto:Space()
+
+
+    ---------------------------------------------------------------------
+    -- Modo reverso
+    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Modo reverso",
-        Desc  = "Se ativo, o JJ começará pelo fim e irá até o início. Ordem decrescente.",
+        Desc  = "Conta de trás pra frente.",
         Callback = function(v)
             reverseEnabled = v
         end
@@ -1200,9 +1362,13 @@ do
 
     Auto:Space()
 
+
+    ---------------------------------------------------------------------
+    -- Outros
+    ---------------------------------------------------------------------
     Auto:Toggle({
         Title = "Espaçamento",
-        Desc = "Separa o sufixo do número. (Ex: UM !)",
+        Desc = "UM ! em vez de UM!",
         Callback = function(v)
             spacingEnabled = v
         end
@@ -1218,6 +1384,10 @@ do
 
     Auto:Space()
 
+
+    ---------------------------------------------------------------------
+    -- Sufixos
+    ---------------------------------------------------------------------
     Auto:Dropdown({
         Title = "Sufixo",
         Values = { "!", "?", ".", ",", "/" },
