@@ -116,21 +116,6 @@ Window:Tag({
     Color = Color3.fromHex("#1c1c1c")
 })
 
--- especial
-Window:CreateTopbarButton("HideUI", "bird", function()
-    if Window and Window.Main then
-        Window.Main.Enabled = false
-    end
-end, 999)
-
-Player.Chatted:Connect(function(msg)
-    if msg == " " then
-        if Window and Window.Main then
-            Window.Main.Enabled = true
-        end
-    end
-end)
-
 local Purple = Color3.fromHex("#7775F2")
 local Yellow = Color3.fromHex("#ECA201")
 local Green = Color3.fromHex("#10C550")
@@ -929,3 +914,18 @@ do
         IconColor = Red
     })
 end
+
+-- especial
+Window:CreateTopbarButton("HideUI", "bird", function()
+    if Window and Window.Main then
+        Window.Main.Enabled = false
+    end
+end, 999)
+
+Player.Chatted:Connect(function(msg)
+    if msg == " " then
+        if Window and Window.Main then
+            Window.Main.Enabled = true
+        end
+    end
+end)
