@@ -1255,10 +1255,27 @@ JJs:Space()
 
 JJs:Dropdown({
         Title = "Sufixo",
-        Values = { "!", "?", ".", ",", "/" },
+        Values = { "! (padrão)", "?", ".", ",", "/" },
         Value = "!",
         Callback = function(v)
             suffix = v
+        end
+    })
+JJs:Space()
+
+JJs:Toggle({
+        Title = "Forçar finalizaçåo",
+        Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
+        Callback = function(v)
+            finishInTimeEnabled = v
+        end
+    })
+
+    JJs:Input({
+        Title = "Tempo (segundos)",
+        Placeholder = "Ex: 100",
+        Callback = function(v)
+            finishTotalTime = tonumber(v) or 60
         end
     })
 JJs:Space()
@@ -1307,23 +1324,6 @@ intervalos:Space()
         Placeholder = "Ex: 3",
         Callback = function(v)
             randomMax = tonumber(v) or 3
-        end
-    })
-    intervalos:Space()
-
-    intervalos:Toggle({
-        Title = "Forçar finalizaçåo",
-        Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
-        Callback = function(v)
-            finishInTimeEnabled = v
-        end
-    })
-
-    intervalos:Input({
-        Title = "Tempo (segundos)",
-        Placeholder = "Ex: 100",
-        Callback = function(v)
-            finishTotalTime = tonumber(v) or 60
         end
     })
 
