@@ -942,7 +942,7 @@ local function EnviarWebhook(titulo, texto, nota, anonimo, isSuggestion)
         descricao = "Sugestão:\n> " .. texto
     else
         -- AVALIAÇÃO TEM NOTA
-        descricao = "Nota: **" .. nota .. "/10" "**\n\nAvaliação:\n> " .. texto
+        descricao = "Nota: **" .. nota .. "/10**\n\nAvaliação:\n> " .. texto
     end
 
     local embed = {
