@@ -858,13 +858,15 @@ end
 -- Auto JJ's
 -- =========================
 
+
+-- chat 
+
 local RemoteChat = {}
 local Connections = {}
 
 local WC = game.WaitForChild
 local FFC = game.FindFirstChild
 
-local Players = game:GetService("Players")
 local TextChatService = game:GetService("TextChatService")
 
 local Player = Players.LocalPlayer
@@ -920,8 +922,9 @@ if InputBar then
     end
 end
 
+
+-- character (usado no jump)
 local Character = {}
-local TweenService = game:GetService("TweenService")
 
 Character.__index = Character
 
@@ -1059,10 +1062,6 @@ end
 -- AUTO JJ'S — CONFIGURAÇÕES E GUI
 ---------------------------------------------------------------------
 
----------------------------------------------------------------------
--- AUTO JJ'S — CONFIGURAÇÕES E GUI
----------------------------------------------------------------------
-
 local running = false
 local startValue = 1
 local endValue   = 100
@@ -1072,10 +1071,10 @@ local randomDelayEnabled = false    -- toggle novo
 local randomMin = 1                 -- min novo
 local randomMax = 3                 -- max novo
 
-local jumpEnabled = true
-local spacingEnabled = false
+local jumpEnabled = false           -- pular
+local spacingEnabled = false        -- separar
 
-local reverseEnabled = false        -- toggle novo (ordem reversa)
+local reverseEnabled = false        -- modo reverso
 
 local suffix = "!"
 local customSuffix = ""
@@ -1100,7 +1099,6 @@ do
                     local limit = endValue
                     local step = 1
 
-                    -- modo reverso
                     if reverseEnabled then
                         i = endValue
                         limit = startValue
@@ -1121,7 +1119,6 @@ do
                             Char:Jump()
                         end
 
-                        -- intervalo aleatório
                         if randomDelayEnabled then
                             local steps = math.floor((randomMax - randomMin) / 0.1)
                             if steps < 0 then steps = 0 end
@@ -1159,10 +1156,6 @@ do
 
     Auto:Space()
 
-    -------------------------------------------------------------
-    -- INTERVALO FIXO
-    -------------------------------------------------------------
-
     Auto:Input({
         Title = "Intervalo (segundos)",
         Placeholder = "Ex: 1.5",
@@ -1171,13 +1164,9 @@ do
         end
     })
 
-    -------------------------------------------------------------
-    -- INTERVALO ALEATÓRIO (NOVO)
-    -------------------------------------------------------------
-
     Auto:Toggle({
-        Title = "Intervalos aleatórios",
-        Desc  = "Escolhe um intervalo entre mínimo e máximo",
+        Title = "Intervalo aleatório",
+        Desc  = "Intervalo será escolhido aleatoriamente entre os valores mínimo e máximo.",
         Callback = function(v)
             randomDelayEnabled = v
         end
@@ -1201,23 +1190,15 @@ do
 
     Auto:Space()
 
-    -------------------------------------------------------------
-    -- MODO REVERSO (NOVO)
-    -------------------------------------------------------------
-
     Auto:Toggle({
         Title = "Modo reverso",
-        Desc  = "Vai do Fim → Início (ex: CEM! NOVENTA E NOVE!...)",
+        Desc  = "Se ativo, o JJ começará pelo fim e irá até o início. Ordem decrescente.",
         Callback = function(v)
             reverseEnabled = v
         end
     })
 
     Auto:Space()
-
-    -------------------------------------------------------------
-    -- OUTROS
-    -------------------------------------------------------------
 
     Auto:Toggle({
         Title = "Espaçamento",
