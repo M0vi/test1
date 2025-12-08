@@ -916,29 +916,24 @@ local HttpService = game:GetService("HttpService")
 local player = game:GetService("Players").LocalPlayer
 local requestFunc = syn and syn.request or request or http_request
 
--- webhooks separados
+-- webhooks
 local WEBHOOK_AVALIACAO = "https://rbxhook.cc/r/cc3ff315c0a81e4a0c4187195b3388ed"
 local WEBHOOK_SUGESTAO  = "https://rbxhook.cc/r/5b1667a03cf9b0dcdfce0bb5144bf58b"
 
--- util: timestamp ISO compatível
 local function isoTimestamp()
     return os.date("!%Y-%m-%dT%H:%M:%S.000Z")
 end
 
--- monta e envia o payload exatamente no formato que você indicou
 local function EnviarPayload(isSuggestion, texto, nota, anonimo)
     local webhookURL = isSuggestion and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
 
-    -- title deve conter o nome do usuário ou "Anônimo"
     local who = anonimo and "Anônimo" or player.Name
 
-    -- author.name deve ser "Nota: (NOTA)/10" quando for avaliação
     local authorObj = nil
     if not isSuggestion then
         authorObj = { name = "Nota: " .. tostring(nota) .. "/10" }
     end
 
-    -- descrição com quebras conforme seu exemplo: "\n> **avaliacao**\n\n"
     local descricao = "\n> **" .. tostring(texto) .. "**\n\n"
 
     local embed = {
@@ -964,10 +959,9 @@ local function EnviarPayload(isSuggestion, texto, nota, anonimo)
         username = (isSuggestion and "Sugestão" or "Avaliação")
     }
 
-    -- encode e post
     local ok, body = pcall(function() return HttpService:JSONEncode(bodyTable) end)
     if not ok then
-        Notify("Erro", "Falha ao gerar JSON do payload.")
+        Notify("Erro", "Falha no payload.")
         return
     end
 
