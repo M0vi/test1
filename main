@@ -266,10 +266,6 @@ local function GetGun()
         return moduleTable, tool.Name
     end
 
-if ok and type(moduleTable) == "table" then
-    return moduleTable, tool.Name
-end
-
 if type(getgc) == "function" then
     for _, v in ipairs(getgc()) do
         if type(v) == "table" and rawget(v, "BackCFrame") and rawget(v, "Damage") then
