@@ -858,9 +858,10 @@ end
 -- Auto JJ's
 -- =========================
 
-------------------------------------------------------------
--- SISTEMA DE CHAT (NÃO É MODULE)
-------------------------------------------------------------
+---------------------------------------------------------------------
+-- REMOTECHAT SCRIPT (mantido exatamente igual ao seu)
+---------------------------------------------------------------------
+
 local RemoteChat = {}
 local Connections = {}
 
@@ -924,9 +925,54 @@ if InputBar then
 end
 
 
-------------------------------------------------------------
--- CONVERSOR COMPLETO PARA NÚMEROS POR EXTENSO + ACENTOS
-------------------------------------------------------------
+---------------------------------------------------------------------
+-- CHARACTER (transformado em script como pediu)
+---------------------------------------------------------------------
+
+local Character = {}
+local TweenService = game:GetService("TweenService")
+
+Character.__index = Character
+
+function Character.new(Player)
+	local self = setmetatable({}, Character)
+	
+	self.Player = Player
+	self.Connections = {}
+	
+	self.Character = Player.Character or Player.CharacterAdded:Wait()
+	self.Humanoid = self.Character:WaitForChild("Humanoid", 95)
+	self.Root = self.Character:WaitForChild("HumanoidRootPart", 95)
+	
+	table.insert(self.Connections, Player.CharacterAdded:Connect(function(Char)
+		self.Character = Char
+		self.Humanoid = Char:WaitForChild("Humanoid", 95)
+		self.Root = Char:WaitForChild("HumanoidRootPart", 95)
+	end))
+	
+	return self
+end
+
+function Character:ChangeHumanoidState(stateEnum)
+	if not self.Humanoid then return false end
+	
+	local success = pcall(function()
+		self.Humanoid:ChangeState(stateEnum)
+	end)
+	return success
+end
+
+function Character:Jump()
+	return self:ChangeHumanoidState(Enum.HumanoidStateType.Jumping)
+end
+
+local Char = Character.new(Player)
+
+
+
+---------------------------------------------------------------------
+-- CONVERSOR NÚMEROS → EXTENSO + CAPS + ACENTOS
+---------------------------------------------------------------------
 
 local accentMap = {
     ["á"]="Á",["à"]="À",["ã"]="Ã",["â"]="Â",
@@ -978,35 +1024,25 @@ local function threeDigitToWords(n)
 
     local h = math.floor(n / 100)
     local rest = n % 100
-    local t = math.floor(rest / 10)
     local parts = {}
 
-    if h > 0 then
-        table.insert(parts, hundreds[h])
-    end
+    if h > 0 then table.insert(parts, hundreds[h]) end
 
     if rest < 20 then
-        if rest > 0 then
-            table.insert(parts, units[rest])
-        end
+        if rest > 0 then table.insert(parts, units[rest]) end
     else
-        local t_digit = math.floor(rest / 10)
-        local u_digit = rest % 10
-
-        table.insert(parts, tens[t_digit])
-
-        if u_digit > 0 then
-            table.insert(parts, units[u_digit])
-        end
+        table.insert(parts, tens[math.floor(rest/10)])
+        local u = rest % 10
+        if u > 0 then table.insert(parts, units[u]) end
     end
 
     return table.concat(parts, " e ")
 end
 
-local function numberToPortugueseWords(num)
+local function numberToWords(num)
     num = tonumber(num)
-    if not num then return "NÚMERO INVÁLIDO!" end
-    if num == 0 then return "ZERO!" end
+    if not num then return "NÚMERO INVÁLIDO" end
+    if num == 0 then return "ZERO" end
 
     local groups = {}
     while num > 0 do
@@ -1015,40 +1051,41 @@ local function numberToPortugueseWords(num)
     end
 
     local parts = {}
-
     for i = #groups,1,-1 do
         local val = groups[i]
-
         if val ~= 0 then
             local text = threeDigitToWords(val)
-
             if i > 1 then
-                local scale = (val == 1) and scales_singular[i-1] or scales_plural[i-1]
-
+                local scale = (val==1) and scales_singular[i-1] or scales_plural[i-1]
                 if i == 2 and val == 1 then
                     text = "mil"
                 else
-                    text = text .. " " .. scale
+                    text = text.." "..scale
                 end
             end
-
             table.insert(parts, text)
         end
     end
 
-    local result = table.concat(parts, " e ")
-    return unicodeUpper(result) .. "!"
+    return unicodeUpper(table.concat(parts, " e "))
 end
 
 
-------------------------------------------------------------
--- AUTO JJ — INTEGRAÇAO WINDUI
-------------------------------------------------------------
+
+---------------------------------------------------------------------
+-- AUTO JJ'S — CONFIGURAÇÕES E GUI
+---------------------------------------------------------------------
 
 local running = false
 local startValue = 1
-local endValue = 100
+local endValue   = 100
 local delayValue = 1.5
+
+local jumpEnabled = false
+local spacingEnabled = false
+
+local suffix = "!"
+local customSuffix = ""
 
 do
     local Auto = ElementsSection:Tab({
@@ -1067,13 +1104,26 @@ do
                 task.spawn(function()
                     for i = startValue, endValue do
                         if not running then break end
-                        RemoteChat:Send(numberToPortugueseWords(i))
+
+                        local word = numberToWords(i)
+
+                        local finalSuffix = customSuffix ~= "" and customSuffix or suffix
+                        local msg = spacingEnabled and (word .. " " .. finalSuffix) or (word .. finalSuffix)
+
+                        RemoteChat:Send(msg)
+
+                        if jumpEnabled then
+                            Char:Jump()
+                        end
+
                         task.wait(delayValue)
                     end
                 end)
             end
         end
     })
+
+    Auto:Space()
 
     Auto:Input({
         Title = "Início",
@@ -1099,14 +1149,55 @@ do
         end
     })
 
+    Auto:Space()
+
+    -----------------------------------------------------------------
+    -- NOVOS TOGGLES
+    -----------------------------------------------------------------
+
+    Auto:Toggle({
+        Title = "Espaçamento",
+        Desc = "Coloca espaço antes do sufixo (UM !)",
+        Callback = function(v)
+            spacingEnabled = v
+        end
+    })
+
+    Auto:Toggle({
+        Title = "Pular",
+        Desc = "Pular ao enviar JJ's.",
+        Callback = function(v)
+            jumpEnabled = v
+        end
+    })
+
+    Auto:Space()
+
+    -----------------------------------------------------------------
+    -- SUFIXO PADRÃO
+    -----------------------------------------------------------------
+
     Auto:Dropdown({
-        Title = "Estilo de JJ",
-        Values = { "JJ (padrão)" },
-        Value = "JJ (padrão)",
-        Callback = function(opt) end
+        Title = "Sufixo",
+        Values = { "!", "?", ".", ",", "/" },
+        Value = "!",
+        Callback = function(v)
+            suffix = v
+        end
+    })
+
+    -----------------------------------------------------------------
+    -- SUFIXO CUSTOMIZADO
+    -----------------------------------------------------------------
+
+    Auto:Input({
+        Title = "Sufixo customizado",
+        Placeholder = "Ex: !",
+        Callback = function(v)
+            customSuffix = tostring(v or "")
+        end
     })
 end
-
 
 -- =========================
 -- 10) DISCORD
