@@ -912,9 +912,17 @@ local Sugestoes = Outros:Tab({
     IconColor = Yellow
 })
 
-local HttpService = game:GetService("HttpService")
-local player = game:GetService("Players").LocalPlayer
 local requestFunc = syn and syn.request or request or http_request
+local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
+
+-- antispam
+local cooldowns = {
+    sugestao  = {},
+    avaliacao = {}
+}
+
+local COOLDOWN_SUGESTAO  = 1800
+local COOLDOWN_AVALIACAO = 21600
 
 -- webhooks
 local WEBHOOK_AVALIACAO = "https://rbxhook.cc/r/cc3ff315c0a81e4a0c4187195b3388ed"
@@ -927,27 +935,26 @@ end
 local function EnviarPayload(isSuggestion, texto, nota, anonimo)
     local webhookURL = isSuggestion and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
 
-local who = anonimo and "Anônimo" or player.Name
+    local who = anonimo and "Anônimo" or player.Name
 
-local authorObj = nil
-if not isSuggestion then
-    authorObj = { name = "Nota: " .. tostring(nota) .. "/10" }
-end
+    local authorObj = nil
+    if not isSuggestion then
+        authorObj = { name = "Nota: " .. tostring(nota) .. "/10" }
+    end
 
-local descricao
+    local descricao
+    if isSuggestion then
+        descricao = "\n> **" .. tostring(texto) .. "**\n\n"
+    else
+        descricao = "Nota: **" .. tostring(nota) .. "/10**\n\n> **" .. tostring(texto) .. "**\n\n"
+    end
 
-if isSuggestion then
-    descricao = "\n> **" .. tostring(texto) .. "**\n\n"
-else
-    descricao = "Nota: **" .. tostring(nota) .. "/10**\n\n> **" .. tostring(texto) .. "**\n\n"
-end
-
-local embedTitle = (
-    isSuggestion 
-        and ("Sugestão feita por: " .. who) 
+    local embedTitle = (
+        isSuggestion 
+        and ("Sugestão feita por: " .. who)
         or  ("Avaliação feita por: " .. who)
-)
-    
+    )
+
     local embed = {
         id = math.random(100000,999999),
         description = descricao,
@@ -971,29 +978,28 @@ local embedTitle = (
         username = (isSuggestion and "Sugestão" or "Avaliação")
     }
 
-    local ok, body = pcall(function() return HttpService:JSONEncode(bodyTable) end)
+    local ok, body = pcall(function() 
+        return HttpService:JSONEncode(bodyTable) 
+    end)
+
     if not ok then
         Notify("Erro", "Falha no payload.")
         return
     end
 
-    -- request
-    local suc, resp = pcall(function()
-        return requestFunc({
+    pcall(function()
+        requestFunc({
             Url = webhookURL,
             Method = "POST",
             Headers = { ["Content-Type"] = "application/json" },
             Body = body
         })
     end)
-
-    if not suc then
-        Notify("Erro", "Falha ao enviar webhook.")
-    end
 end
 
+
 -------------------------------------------------------
---  SEÇÃO: SUGESTÃO  (SEM NOTA)
+--  SUGESTÃO
 -------------------------------------------------------
 
 local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
@@ -1018,10 +1024,21 @@ sugestao:Space()
 sugestao:Button({
     Title = "Enviar",
     Callback = function()
+        local now = os.clock()
+
+        -- Anti-spam por HWID
+        if cooldowns.sugestao[HWID] and now - cooldowns.sugestao[HWID] < COOLDOWN_SUGESTAO then
+            local restante = math.floor(COOLDOWN_SUGESTAO - (now - cooldowns.sugestao[HWID]))
+            Notify("Espere um pouco!", "Aguarde " .. restante .. "s para enviar outra sugestão.")
+            return
+        end
+
         if not sugestaoBox.Value or sugestaoBox.Value == "" then
             Notify("Erro", "Digite algo antes de enviar sua sugestão.")
             return
         end
+
+        cooldowns.sugestao[HWID] = now
 
         EnviarPayload(true, sugestaoBox.Value, nil, anonimatoSug)
         Notify("Agradeço!", "Sugestão enviada.")
@@ -1030,7 +1047,7 @@ sugestao:Button({
 
 
 -------------------------------------------------------
---  SEÇÃO: AVALIAÇÃO  (COM NOTA)
+--  AVALIAÇÃO
 -------------------------------------------------------
 
 local avaliar = Sugestoes:Section({ Title = "Avalie!" })
@@ -1066,6 +1083,15 @@ avaliar:Space()
 avaliar:Button({
     Title = "Enviar",
     Callback = function()
+        local now = os.clock()
+
+        -- anti spam HWID
+        if cooldowns.avaliacao[HWID] and now - cooldowns.avaliacao[HWID] < COOLDOWN_AVALIACAO then
+            local restante = math.floor(COOLDOWN_AVALIACAO - (now - cooldowns.avaliacao[HWID]))
+            Notify("Espere um pouco!", "Aguarde " .. restante .. "s para enviar outra avaliação.")
+            return
+        end
+
         if not avaliarBox.Value or avaliarBox.Value == "" then
             Notify("Erro", "Escreva sua avaliação antes de enviar.")
             return
@@ -1076,12 +1102,14 @@ avaliar:Button({
             return
         end
 
+        cooldowns.avaliacao[HWID] = now
+
         EnviarPayload(false, avaliarBox.Value, avaliarNota, anonimatoAval)
         Notify("Agradeço!", "Avaliação enviada.")
     end
 })
-
 end
+
 
 -- =========================
 -- 12) ICONS
