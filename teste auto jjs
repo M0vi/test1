@@ -1427,16 +1427,6 @@ local function dinheiro()
 	return 0
 end
 
-local function Notify(t, m)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = t;
-			Text = m;
-			Duration = 5;
-		})
-	end)
-end
-
 local function seguro()
 	if not ModoSeguro then return false end
 	if not root then return false end
@@ -1498,7 +1488,7 @@ end
 local rodando = false
 local cleaning = false
 
-local ETAParagraph = ElementsSection:Paragraph({
+local ETAParagraph = Cash:Paragraph({
 	Title = "Status",
 	Desc = "Aguardando...",
 	Color = "Green"
