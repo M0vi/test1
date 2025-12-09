@@ -1344,39 +1344,407 @@ end
 -- Autofarm
 -- =========================
 
-do
-    local Cash = ElementsSection:Tab({
-        Title = "Autofarm",
-        Icon = "lucide:keyboard",
-        IconColor = Red
-    })
+----------------------------------------------------------------
+-- AUTO FARM CONFIG
+----------------------------------------------------------------
+_G.AutoFarm = true
 
+local cfg = ...
+local ModoSeguro       = (cfg and cfg.ModoSeguro) or true
+local RaioDeSeguranca  = (cfg and cfg.RaioDeSeguranca) or 50
+
+----------------------------------------------------------------
+-- SERVICES
+----------------------------------------------------------------
+local PS = game:GetService("Players")
+local WS = game:GetService("Workspace")
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local plr = PS.LocalPlayer
+local char, root, bag
+
+----------------------------------------------------------------
+-- REFERENCES
+----------------------------------------------------------------
+local bank = WS.Map.Robbery.Bank
+local status = bank.RobberyStatus.SurfaceGui.BankStatus
+local CollectPos = bank.CollectPad.Position
+
+local Remotes = RS.Assets.Remotes
+local BuyShop = Remotes.BuyShop
+local Robbery = Remotes.Robbery
+
+----------------------------------------------------------------
+-- REFRESH
+----------------------------------------------------------------
+local function ref()
+	char = plr.Character or plr.CharacterAdded:Wait()
+	root = char:WaitForChild("HumanoidRootPart")
+	bag  = plr:WaitForChild("Backpack")
+end
+ref()
+
+----------------------------------------------------------------
+-- TELEPORTE
+----------------------------------------------------------------
+local function tp(v)
+	if char and root then
+		char:PivotTo(CFrame.new(v))
+	end
+end
+
+----------------------------------------------------------------
+-- SAFEZONE
+----------------------------------------------------------------
+local SAFE = WS:FindFirstChild("SAFEZONE")
+if not SAFE then
+	SAFE = Instance.new("Part")
+	SAFE.Name = "SAFEZONE"
+	SAFE.Size = Vector3.new(45,12,45)
+	SAFE.Anchored = true
+	SAFE.CanCollide = true
+	SAFE.Transparency = 0.15
+	SAFE.Material = Enum.Material.SmoothPlastic
+	SAFE.BrickColor = BrickColor.new("Really black")
+	SAFE.Position = CollectPos - Vector3.new(0,30,0)
+	SAFE.Parent = WS
+end
+
+local function tps()
+	tp(SAFE.Position + Vector3.new(0, SAFE.Size.Y/2 + 4, 0))
+end
+
+----------------------------------------------------------------
+-- UTILS
+----------------------------------------------------------------
+local function item(n)
+	local b = plr:FindFirstChild("Backpack")
+	return (b and b:FindFirstChild(n)) or (char and char:FindFirstChild(n))
+end
+
+local function aberto()
+	return status.Text == "ABERTO"
+end
+
+local function spin()
+	char:PivotTo(root.CFrame * CFrame.Angles(0, math.rad(30), 0))
+end
+
+local function dinheiro()
+	for _,v in ipairs(WS:GetDescendants()) do
+		if v.Name == "Money Bag" then
+			local h = v:FindFirstChildWhichIsA("BasePart")
+			if not h then continue end
+			local att = h:FindFirstChild("DataAttachment")
+			if not att then continue end
+			local gui = att:FindFirstChild("BillboardGui")
+			if not gui then continue end
+			local l = gui.Frame:FindFirstChild("Money")
+			if l then return tonumber(l.Text:match("%d+")) or 0 end
+		end
+	end
+	return 0
+end
+
+----------------------------------------------------------------
+-- MODO SEGURO
+----------------------------------------------------------------
+local function seguro()
+	if not ModoSeguro then return false end
+	if not root then return false end
+
+	for _,p in ipairs(PS:GetPlayers()) do
+		if p ~= plr and p.Character then
+			local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+			if hrp and (hrp.Position - root.Position).Magnitude <= RaioDeSeguranca then
+				
+				tps()
+
+				repeat
+					task.wait(0.4)
+				until not _G.AutoFarm
+				or not hrp
+				or (hrp.Position - root.Position).Magnitude > RaioDeSeguranca
+
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+----------------------------------------------------------------
+-- COMPRA DE C4
+----------------------------------------------------------------
+local c4Comprada = false
+local BUY_POS = Vector3.new(-766, 19, -365)
+
+local function tentarComprarC4()
+	if c4Comprada then return true end
+	if item("C4") then c4Comprada = true return true end
+
+	tp(BUY_POS)
+	task.wait(1)
+
+	BuyShop:FireServer("C4")
+
+	for i = 1, 40 do
+		if item("C4") then
+			c4Comprada = true
+			return true
+		end
+		task.wait(0.1)
+	end
+
+	return false
+end
+
+----------------------------------------------------------------
+-- VENDER
+----------------------------------------------------------------
+local VENDER_POS = Vector3.new(-742,-7,-536)
+
+local function vender()
+	if seguro() then return end
+
+	tp(VENDER_POS + Vector3.new(math.random(-3,3), math.random(-1,1), math.random(-3,3)))
+	task.wait(0.2)
+
+	while dinheiro() > 0 and _G.AutoFarm do
+		if seguro() then break end
+		Robbery:FireServer("Payment")
+		task.wait(0.1)
+	end
+
+	task.wait(0.5)
+	tp(CollectPos)
+	task.wait(0.1)
+	tps()
+end
+
+----------------------------------------------------------------
+-- AUTO FARM
+----------------------------------------------------------------
+local rodando = false
+
+local function farm()
+	if rodando or not _G.AutoFarm then return end
+	rodando = true
+
+	task.spawn(function()
+
+		repeat task.wait(0.2) until aberto() or not _G.AutoFarm
+		if not _G.AutoFarm then rodando = false return end
+
+		c4Comprada = false
+		tentarComprarC4()
+
+		local c4 = item("C4")
+		if c4 then char.Humanoid:EquipTool(c4) end
+
+		local prompt = bank.BankVault.C4.Handle:FindFirstChildOfClass("ProximityPrompt")
+		local vaultPos = bank.BankVault.Vault.Front.Position
+
+		local function usarC4AteSumir()
+			local lastC4 = item("C4")
+			if not lastC4 then return end
+
+			while aberto() and _G.AutoFarm do
+				if seguro() then continue end
+				local c4Tool = item("C4")
+
+				if not c4Tool then
+					break
+				end
+
+				fireproximityprompt(prompt)
+				task.wait(0.15)
+			end
+		end
+
+		tp(vaultPos)
+		task.wait(1)
+		usarC4AteSumir()
+
+		tps()
+		task.wait(11)
+
+		while aberto() and _G.AutoFarm do
+
+			if seguro() then continue end
+
+			if dinheiro() >= 4000 then
+				task.wait(math.random(8,10))
+				vender()
+			else
+				tp(CollectPos)
+				task.wait(0.05)
+				spin()
+
+				if char.Humanoid.Health < 50 then
+					tps()
+					repeat task.wait(0.2) until char.Humanoid.Health >= 90 or not _G.AutoFarm
+				end
+
+				tps()
+				task.wait(0.005)
+			end
+		end
+
+		rodando = false
+	end)
+end
+
+----------------------------------------------------------------
+-- CHARACTER HANDLING
+----------------------------------------------------------------
+plr.CharacterAdded:Connect(function()
+	task.wait(0.3)
+	ref()
+
+	if _G.AutoFarm then farm() end
+
+	char:WaitForChild("Humanoid").Died:Connect(function()
+		rodando = false
+		ref()
+		task.wait(1)
+
+		if _G.AutoFarm then
+			tp(CollectPos)
+			tps()
+			farm()
+		end
+	end)
+end)
+
+----------------------------------------------------------------
+-- FECHOU = AGUARDA 3s E VENDE
+----------------------------------------------------------------
+local ultimaVenda = 0
+
+status:GetPropertyChangedSignal("Text"):Connect(function()
+	if not _G.AutoFarm then return end
+
+	if status.Text == "ABERTO" then
+		farm()
+		return
+	end
+
+	if status.Text == "FECHADO" then
+		local agora = tick()
+		if agora - ultimaVenda < 5 then return end
+		ultimaVenda = agora
+
+		task.spawn(function()
+			task.wait(3)
+
+			if not _G.AutoFarm then return end
+
+			local d = dinheiro()
+			if d > 0 and _G.AutoFarm then
+				vender()
+			end
+		end)
+	end
+end)
+
+----------------------------------------------------------------
+-- ANTIVOID
+----------------------------------------------------------------
+local antivoidloop
+local DestroyHeight = workspace.FallenPartsDestroyHeight
+
+local function enableAntiVoid()
+	if antivoidloop then antivoidloop:Disconnect() end
+
+	antivoidloop = RunService.Stepped:Connect(function()
+		if not _G.AutoFarm then return end
+		if not char or not root then return end
+
+		if root.Position.Y <= DestroyHeight + 25 then
+			root.Velocity = root.Velocity + Vector3.new(0, 250, 0)
+		end
+	end)
+end
+
+enableAntiVoid()
+
+plr.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	ref()
+	enableAntiVoid()
+end)
+
+----------------------------------------------------------------
+-- REQUISITOS
+----------------------------------------------------------------
+local ls = plr:FindFirstChild("leaderstats")
+local money = ls and ls:FindFirstChild("Dinheiro")
+if money and money.Value < 1300 then
+	plr:Kick("É necessário ao menos 1300 de dinheiro para começar a usar o script.")
+	return
+end
+
+farm()
+-- encerra
+
+
+
+----------------------------------------------------------------
+-- UI INTEGRADA
+----------------------------------------------------------------
+
+local Cash = ElementsSection:Tab({
+	Title = "Autofarm",
+	Icon = "lucide:keyboard",
+	IconColor = Red
+})
+
+-- TOGGLE AUTO FARM
 Cash:Toggle({
-        Title = "Autofarm",
-        Desc = "Ativa ou desativa o autofarm.",
-        Callback = function(v)
-            -- ativar ou desativar
-        end
-    })
+	Title = "Autofarm",
+	Desc = "Ativa ou desativa o autofarm.",
+	Callback = function(v)
+		_G.AutoFarm = v
+
+		if v then
+			if not rodando then
+				task.spawn(farm)
+			end
+		else
+			rodando = false
+			pcall(function()
+				tp(CollectPos)
+				tps()
+			end)
+		end
+	end
+})
 Cash:Space()
 
+-- TOGGLE MODO SEGURO
 Cash:Toggle({
-        Title = "Modo seguro",
-        Desc = "Interrompe o autofarm caso alguém esteja a uma X distância de você.",
-        Callback = function(v)
-            -- função modo seguro
-        end
-    })
+	Title = "Modo seguro",
+	Desc = "Interrompe o autofarm caso alguém esteja a uma X distância de você.",
+	Callback = function(v)
+		ModoSeguro = v
+	end
+})
 
+-- INPUT RAIO
 Cash:Input({
-        Title = "Raio de segurança",
-        Desck = "Se alguém estiver dentro desse raio, interromperá o autofarm até que não haja ninguém nesse mesmo raio.",
-        Placeholder = "Ex: 60 (recomendado)",
-        Callback = function(v)
-            -- lógica do raio
-        end
-    })
-end
+	Title = "Raio de segurança",
+	Desc = "Se alguém estiver dentro desse raio, interromperá o autofarm.",
+	Placeholder = "Ex: 60 (recomendado)",
+	Callback = function(v)
+		local n = tonumber(v)
+		if n then
+			RaioDeSeguranca = n
+		end
+	end
+})
 
 -- =========================
 -- 10) DISCORD
