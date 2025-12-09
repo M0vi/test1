@@ -68,7 +68,7 @@ end
 -- =========================
 -- 3) UI
 -- =========================
-WindUI.Creator.AddIcons("solar", {
+local icons = WindUI.Creator.AddIcons("solar", {
     ["CheckSquareBold"] = "rbxassetid://132438947521974",
     ["CursorSquareBold"] = "rbxassetid://120306472146156",
     ["FileTextBold"] = "rbxassetid://89294979831077",
