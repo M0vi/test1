@@ -199,16 +199,29 @@ local function farm()
 		if c4 then char.Humanoid:EquipTool(c4) end
 
 		local prompt = bank.BankVault.C4.Handle:FindFirstChildOfClass("ProximityPrompt")
-		local vaultPos = bank.BankVault.Vault.Front.Position
+local vaultPos = bank.BankVault.Vault.Front.Position
 
-		tp(vaultPos)
-		task.wait(1)
+tp(vaultPos)
+task.wait(1)
 
-		while aberto() and item("C4") and _G.AutoFarm do
-			if seguro() then continue end
-			fireproximityprompt(prompt)
-			task.wait(0.15)
-		end
+usarC4AteSumir()
+local function usarC4AteSumir()
+    local lastC4 = item("C4")
+    if not lastC4 then return end
+
+    while aberto() and _G.AutoFarm do
+        if seguro() then continue end
+        local c4Tool = item("C4")
+
+        -- Se sumiu → foi usada
+        if not c4Tool then
+            break
+        end
+
+        fireproximityprompt(prompt)
+        task.wait(0.15)
+    end
+end
 
 		tps()
 		task.wait(11)
