@@ -224,7 +224,7 @@ local function usarC4AteSumir()
 end
 
 		tps()
-		task.wait(11)
+		task.wait(10)
 
 		while aberto() and _G.AutoFarm do
 
@@ -235,7 +235,7 @@ end
 				vender()
 			else
 				tp(CollectPos)
-				task.wait(0.05)
+				task.wait(0.01)
 				spin()
 
 				if char.Humanoid.Health < 50 then
