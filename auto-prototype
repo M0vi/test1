@@ -211,7 +211,7 @@ local function farm()
 		end
 
 		tps()
-		task.wait(10)
+		task.wait(11)
 
 		while aberto() and _G.AutoFarm do
 
