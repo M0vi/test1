@@ -1339,6 +1339,45 @@ local Extras = Auto:Section({
     })
 end
 
+
+-- =========================
+-- Autofarm
+-- =========================
+
+do
+    local Cash = ElementsSection:Tab({
+        Title = "Autofarm",
+        Icon = "lucide:keyboard",
+        IconColor = Red
+    })
+
+Cash:Toggle({
+        Title = "Autofarm",
+        Desc = "Ativa ou desativa o autofarm.",
+        Callback = function(v)
+            -- ativar ou desativar
+        end
+    })
+Cash:Space()
+
+Cash:Toggle({
+        Title = "Modo seguro",
+        Desc = "Interrompe o autofarm caso alguém esteja a uma X distância de você.",
+        Callback = function(v)
+            -- função modo seguro
+        end
+    })
+
+Cash:Input({
+        Title = "Raio de segurança",
+        Desck = "Se alguém estiver dentro desse raio, interromperá o autofarm até que não haja ninguém nesse mesmo raio.",
+        Placeholder = "Ex: 60 (recomendado)",
+        Callback = function(v)
+            -- lógica do raio
+        end
+    })
+end
+
 -- =========================
 -- 10) DISCORD
 -- =========================
