@@ -201,10 +201,7 @@ local function farm()
 		local prompt = bank.BankVault.C4.Handle:FindFirstChildOfClass("ProximityPrompt")
 local vaultPos = bank.BankVault.Vault.Front.Position
 
-tp(vaultPos)
-task.wait(1)
-
-usarC4AteSumir()
+-- Função precisa vir ANTES da chamada
 local function usarC4AteSumir()
     local lastC4 = item("C4")
     if not lastC4 then return end
@@ -223,8 +220,12 @@ local function usarC4AteSumir()
     end
 end
 
+tp(vaultPos)
+task.wait(1)
+
+usarC4AteSumir()
 		tps()
-		task.wait(10)
+		task.wait(11)
 
 		while aberto() and _G.AutoFarm do
 
@@ -235,7 +236,7 @@ end
 				vender()
 			else
 				tp(CollectPos)
-				task.wait(0.01)
+				task.wait(0.05)
 				spin()
 
 				if char.Humanoid.Health < 50 then
