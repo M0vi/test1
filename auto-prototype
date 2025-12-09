@@ -222,7 +222,7 @@ local function farm()
 				vender()
 			else
 				tp(CollectPos)
-				task.wait(0.01)
+				task.wait(0.03)
 				spin()
 
 				if char.Humanoid.Health < 50 then
