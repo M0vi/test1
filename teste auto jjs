@@ -68,6 +68,7 @@ end
 -- =========================
 -- 3) UI
 -- =========================
+--[[
 local icons = WindUI.Creator.AddIcons("solar", {
     ["CheckSquareBold"] = "rbxassetid://132438947521974",
     ["CursorSquareBold"] = "rbxassetid://120306472146156",
@@ -78,7 +79,7 @@ local icons = WindUI.Creator.AddIcons("solar", {
     ["InfoSquareBold"] = "rbxassetid://119096461016615",
     ["PasswordMinimalisticInputBold"] = "rbxassetid://109919668957167",
     ["SolarSquareTransferHorizontalBold"] = "rbxassetid://125444491429160",
-})
+})--]]
 
 local Window = WindUI:CreateWindow({
     Title = "Exército Brasileiro",
