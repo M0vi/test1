@@ -627,11 +627,11 @@ do
     local ESPEnabled = false
 
 local ESPSettings = {
-    Box = true,
-    Name = true,
-    Studs = true,
-    Health = true,
-    WeaponN = true
+    Box = false,
+    Name = false,
+    Studs = false,
+    Health = false,
+    WeaponN = false
 }
 
 local ESP = {}
