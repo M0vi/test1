@@ -1,10 +1,10 @@
 ----------------------------------------------------------------
 -- AUTO FARM CONFIG
 ----------------------------------------------------------------
-_G.AutoFarm = true
+_G.AutoFarm = false
 
 local cfg = ...
-local ModoSeguro       = (cfg and cfg.ModoSeguro) or true
+local ModoSeguro       = (cfg and cfg.ModoSeguro) or false
 local RaioDeSeguranca  = (cfg and cfg.RaioDeSeguranca) or 50
 
 ----------------------------------------------------------------
