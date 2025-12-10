@@ -611,6 +611,8 @@ SectionPlayer:Paragraph({
         end
     })
 end
+
+
 -- =========================
 -- 9) Hitbox e ESP
 -- =========================
@@ -764,11 +766,6 @@ do
     end
 
     Players.PlayerAdded:Connect(function(plr)
-            if HitboxEnabled then ApplyHitbox(plr) end
-            if ESPEnabled then ApplyESP(plr) end
-        end)
-
-Players.CharacterAdded:Connect(function(plr)
             if HitboxEnabled then ApplyHitbox(plr) end
             if ESPEnabled then ApplyESP(plr) end
         end)
