@@ -208,167 +208,6 @@ local function NoClip()
 end
 
 
--- Somente do Tevez
-
-local GS = Replicated:WaitForChild("GunSystem")
-local GC = GS:WaitForChild("GunsConfigurations")
-local FireEvent = GS.Remotes.Events.Fire
-local ReloadFunction = GS.Remotes.Functions.Reload
-
-local Active = true
-local Aura = false
-local Blocker = false
-local Connections = {}
-local Tasks = {}
-local LastTargetTime = 0
-
-local function track(c) table.insert(Connections, c) end
-local function trackTask(t) table.insert(Tasks, t) end
-local function reg(target) LastTargetTime = tick() end
-
-local function HasGun()
-    local bp = Player:FindFirstChild("Backpack")
-    local char = Player.Character
-
-    for _, cfg in ipairs(GC:GetChildren()) do
-        local n = cfg.Name
-        if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
-            return true
-        end
-    end
-    return false
-end
-
--- Pega a info da arma
-local function GetGun()
-    local c = Player.Character
-    if not c then return nil end
-
-    local tool = c:FindFirstChildWhichIsA("Tool")
-    if not tool then return nil end
-
-    local cfgInstance = GC:FindFirstChild(tool.Name)
-    if not cfgInstance then return nil end
-
-    local ok, moduleTable = pcall(function() return require(cfgInstance) end)
-    if ok and type(moduleTable) == "table" then
-        return moduleTable, tool.Name
-    end
-
-if type(getgc) == "function" then
-    for _, v in ipairs(getgc()) do
-        if type(v) == "table" and rawget(v, "BackCFrame") and rawget(v, "Damage") then
-            if rawget(v, "Name") == tool.Name or rawget(v, "Title") == tool.Name then
-                return v, tool.Name
-            end
-        end
-    end
-end
-
-return nil, tool.Name
-end
-
--- Modifica os values da arma
-local function ModifyGun(prop, val)
-    local cfg, gunName = GetGun()
-    if not cfg then
-        Notify("Erro", "Não foi possível obter configuração da arma.")
-        return
-    end
-
--- Check da propriedade
-    if rawget(cfg, prop) == nil then
-        Notify("Erro", "Propriedade '"..tostring(prop).."' não existe nesta arma.")
-        return
-    end
-
-    rawset(cfg, prop, val)
-end
-
--- Recarregar
-trackTask(task.spawn(function()
-    while task.wait(0.25) do
-        if not Active or not Aura or not HasGun() then continue end
-        local c = Player.Character
-        if not c then continue end
-
-        local tool = c:FindFirstChildWhichIsA("Tool")
-        if not tool then continue end
-
-        pcall(function()
-            ReloadFunction:InvokeServer(tool)
-        end)
-    end
-end))
-
--- Kill aura
-trackTask(task.spawn(function()
-    local rp = RaycastParams.new()
-    rp.FilterType = Enum.RaycastFilterType.Exclude
-
-    while Active do
-        if Aura and HasGun() and Player.Character then
-            local c = Player.Character
-            local tool = c:FindFirstChildWhichIsA("Tool")
-
-            if tool then
-                local cfgInstance = GC:FindFirstChild(tool.Name)
-                if cfgInstance then
-                    local cfgData = (pcall(function() return require(cfgInstance) end) and require(cfgInstance)) or nil
-                    local firePart = tool:FindFirstChild("FirePart") or tool:FindFirstChild("Handle") or tool.PrimaryPart
-                    if firePart then
-                        rp.FilterDescendantsInstances = {Player.Character}
-
-                        local target, dist = nil, math.huge
-
-                        for _, plr in ipairs(Players:GetPlayers()) do
-                            if plr ~= Player and plr.Team ~= Player.Team and plr.Character then
-                                local h = plr.Character:FindFirstChildOfClass("Humanoid")
-                                if h and h.Health > 0 then
-                                    local head = plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
-                                    if head then
-                                        local d = (head.Position - firePart.Position).Magnitude
-                                        if d < dist then
-                                            dist = d
-                                            target = head
-                                        end
-                                    end
-                                end
-                            end
-                        end
-
-                        if target then
-                            local direction = target.Position - firePart.Position
-                            local result = workspace:Raycast(firePart.Position, direction.Unit * direction.Magnitude, rp)
-
-                            local hitPos = (result and result.Position) or target.Position
-                            local info = {
-                                [target] = {
-                                    Normal   = (result and result.Normal) or Vector3.new(0,1,0),
-                                    Position = hitPos,
-                                    Instance = target,
-                                    Distance = direction.Magnitude,
-                                    Material = (result and result.Material) or Enum.Material.ForceField
-                                }
-                            }
-
-                            pcall(function()
-                                FireEvent:FireServer(tool, info, hitPos)
-                            end)
-
-                            reg(target.Parent)
-                        end
-                    end
-                end
-            end
-        end
-
-        task.wait()
-    end
-end))
--- encerra as coisas de somente tevez!
-
-
 -- =========================
 -- 8) TAB - Mods (UI)
 -- =========================
@@ -380,139 +219,6 @@ do
         IconColor = Blue,
     })
 
--- Somente Tevez
-    local SectionKillAura = TabA:Section({
-        Title = "Kill Aura"
-    })
-
-    SectionKillAura:Paragraph({
-        Title = "Kill Aura",
-        Desc = "Enquanto estiver com a arma, mata todos os inimigos ao redor de você. Não mata inimigos em safezones.",
-    })
-
-    SectionKillAura:Toggle({
-        Title = "Kill-aura",
-        Callback = function(state)
-            if state then
-                if not HasGun() then
-                    Blocker = true
-                    Notify("Erro", "Você precisa de uma arma.")
-                    return
-                end
-                Aura = true
-                Blocker = false
-                Notify("Script", "[KILL-AURA] Ativado")
-            else
-                Aura = false
-                Notify("Script", "[KILL-AURA] Desativado")
-            end
-        end
-    })
-
-    SectionKillAura:Space()
-
-
-    -----------------------------------------------------------
-    -- SECTION 2: ARMA (Bullets, Spread, Range)
-    -----------------------------------------------------------
-    local SectionArma = TabA:Section({
-        Title = "Arma"
-    })
-
-    local bulletsValue = nil
-    local spreadValue  = nil
-    local rangeValue   = nil
-
-    SectionArma:Paragraph({
-        Title = "Bullets",
-        Desc = "Modifica a quantidade de balas que saem da arma por disparo. Além disso, multiplica o dano por hit.",
-    })
-
-    SectionArma:Input({
-        Title = "Bullets",
-        Placeholder = "Valor",
-        Callback = function(v)
-            local n = tonumber(v)
-            bulletsValue = n
-            if n then
-                Notify("Bullets", "Valor: "..tostring(n))
-            else
-                Notify("Bullets", "Inválido")
-            end
-        end
-    })
-    SectionArma:Space()
-
-
-    SectionArma:Paragraph({
-        Title = "Spread",
-        Desc = "Controla a dispersão dos tiros. Quanto maior, mais espalhado os tiros sairão da arma. Quanto menor, mais juntas as balas ficarão.",
-    })
-
-    SectionArma:Input({
-        Title = "Spread",
-        Placeholder = "Valor",
-        Callback = function(v)
-            local n = tonumber(v)
-            spreadValue = n
-            if n then
-                Notify("Spread", "Valor: "..tostring(n))
-            else
-                Notify("Spread", "Inválido")
-            end
-        end
-    })
-    SectionArma:Space()
-
-
-    SectionArma:Paragraph({
-        Title = "Range",
-        Desc = "Distância pela qual o disparo consegue chegar.",
-    })
-
-    SectionArma:Input({
-        Title = "Range",
-        Placeholder = "Valor",
-        Callback = function(v)
-            local n = tonumber(v)
-            rangeValue = n
-            if n then
-                Notify("Range", "Valor: "..tostring(n))
-            else
-                Notify("Range", "Inválido")
-            end
-        end
-    })
-    SectionArma:Space()
-
-
-    SectionArma:Paragraph({
-        Title = "Aplicar mods",
-        Desc = "Aplica as modificações na arma equipada.",
-    })
-
-    SectionArma:Button({
-        Title = "Aplicar mods",
-        Callback = function()
-            if not HasGun() then
-                Notify("Erro", "Equipe uma arma para modificar.")
-                return
-            end
-
-            if bulletsValue then ModifyGun("Bullets", bulletsValue) end
-            if spreadValue then ModifyGun("Spread", spreadValue) end
-            if rangeValue then ModifyGun("Range", rangeValue) end
-
-            Notify("Mods", "Aplicações feitas.")
-        end
-    })
-    SectionArma:Space()
-
--- encerra somente Tevez novamente!
-
-    -----------------------------------------------------------
-    -- SECTION 3: PLAYER (Noclip + Speed)
-    -----------------------------------------------------------
     local SectionPlayer = TabA:Section({
         Title = "Player"
     })
@@ -916,7 +622,7 @@ SectionESP:Toggle({
 })
 
 SectionESP:Toggle({
-    Title = "Arma",
+    Title = "Item",
     Callback = function(v)
         ESPSettings.WeaponN = v
     end
@@ -1422,6 +1128,315 @@ local Extras = Auto:Section({
 end
 
 
+-- TUDO TEVEZ!!!
+
+local TEVEZ_MAPA = game.PlaceId == 13132367906
+
+
+if TEVEZ_MAPA then
+
+do
+    local SomenteTevez = Window:Section({
+        Title = "[EB] TEVEZ",
+        Icon = "geist:heart",
+        IconColor = Red
+    })
+end
+
+
+-- KILL AURA
+
+local GS = Replicated:WaitForChild("GunSystem")
+local GC = GS:WaitForChild("GunsConfigurations")
+local FireEvent = GS.Remotes.Events.Fire
+local ReloadFunction = GS.Remotes.Functions.Reload
+
+local Active = true
+local Aura = false
+local Blocker = false
+local Connections = {}
+local Tasks = {}
+local LastTargetTime = 0
+
+local function track(c) table.insert(Connections, c) end
+local function trackTask(t) table.insert(Tasks, t) end
+local function reg(target) LastTargetTime = tick() end
+
+local function HasGun()
+    local bp = Player:FindFirstChild("Backpack")
+    local char = Player.Character
+
+    for _, cfg in ipairs(GC:GetChildren()) do
+        local n = cfg.Name
+        if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Pega a info da arma
+local function GetGun()
+    local c = Player.Character
+    if not c then return nil end
+
+    local tool = c:FindFirstChildWhichIsA("Tool")
+    if not tool then return nil end
+
+    local cfgInstance = GC:FindFirstChild(tool.Name)
+    if not cfgInstance then return nil end
+
+    local ok, moduleTable = pcall(function() return require(cfgInstance) end)
+    if ok and type(moduleTable) == "table" then
+        return moduleTable, tool.Name
+    end
+
+if type(getgc) == "function" then
+    for _, v in ipairs(getgc()) do
+        if type(v) == "table" and rawget(v, "BackCFrame") and rawget(v, "Damage") then
+            if rawget(v, "Name") == tool.Name or rawget(v, "Title") == tool.Name then
+                return v, tool.Name
+            end
+        end
+    end
+end
+
+return nil, tool.Name
+end
+
+-- Modifica os values da arma
+local function ModifyGun(prop, val)
+    local cfg, gunName = GetGun()
+    if not cfg then
+        Notify("Erro", "Não foi possível obter configuração da arma.")
+        return
+    end
+
+-- Check da propriedade
+    if rawget(cfg, prop) == nil then
+        Notify("Erro", "Propriedade '"..tostring(prop).."' não existe nesta arma.")
+        return
+    end
+
+    rawset(cfg, prop, val)
+end
+
+-- Recarregar
+trackTask(task.spawn(function()
+    while task.wait(0.25) do
+        if not Active or not Aura or not HasGun() then continue end
+        local c = Player.Character
+        if not c then continue end
+
+        local tool = c:FindFirstChildWhichIsA("Tool")
+        if not tool then continue end
+
+        pcall(function()
+            ReloadFunction:InvokeServer(tool)
+        end)
+    end
+end))
+
+-- Kill aura
+trackTask(task.spawn(function()
+    local rp = RaycastParams.new()
+    rp.FilterType = Enum.RaycastFilterType.Exclude
+
+    while Active do
+        if Aura and HasGun() and Player.Character then
+            local c = Player.Character
+            local tool = c:FindFirstChildWhichIsA("Tool")
+
+            if tool then
+                local cfgInstance = GC:FindFirstChild(tool.Name)
+                if cfgInstance then
+                    local cfgData = (pcall(function() return require(cfgInstance) end) and require(cfgInstance)) or nil
+                    local firePart = tool:FindFirstChild("FirePart") or tool:FindFirstChild("Handle") or tool.PrimaryPart
+                    if firePart then
+                        rp.FilterDescendantsInstances = {Player.Character}
+
+                        local target, dist = nil, math.huge
+
+                        for _, plr in ipairs(Players:GetPlayers()) do
+                            if plr ~= Player and plr.Team ~= Player.Team and plr.Character then
+                                local h = plr.Character:FindFirstChildOfClass("Humanoid")
+                                if h and h.Health > 0 then
+                                    local head = plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
+                                    if head then
+                                        local d = (head.Position - firePart.Position).Magnitude
+                                        if d < dist then
+                                            dist = d
+                                            target = head
+                                        end
+                                    end
+                                end
+                            end
+                        end
+
+                        if target then
+                            local direction = target.Position - firePart.Position
+                            local result = workspace:Raycast(firePart.Position, direction.Unit * direction.Magnitude, rp)
+
+                            local hitPos = (result and result.Position) or target.Position
+                            local info = {
+                                [target] = {
+                                    Normal   = (result and result.Normal) or Vector3.new(0,1,0),
+                                    Position = hitPos,
+                                    Instance = target,
+                                    Distance = direction.Magnitude,
+                                    Material = (result and result.Material) or Enum.Material.ForceField
+                                }
+                            }
+
+                            pcall(function()
+                                FireEvent:FireServer(tool, info, hitPos)
+                            end)
+
+                            reg(target.Parent)
+                        end
+                    end
+                end
+            end
+        end
+
+        task.wait()
+    end
+end))
+
+
+-- UI AUTOFARM
+
+do
+    local Mods = ElementsSection:Tab({
+        Title = "Mods",
+        Icon = "lucide:keyboard",
+        IconColor = Red
+    })
+
+    local SectionKillAura = Mods:Section({
+        Title = "Kill Aura"
+    })
+
+    SectionKillAura:Paragraph({
+        Title = "Kill Aura",
+        Desc = "Enquanto estiver com a arma, mata todos os inimigos ao redor de você. Não mata inimigos em safezones.",
+    })
+
+    SectionKillAura:Toggle({
+        Title = "Kill-aura",
+        Callback = function(state)
+            if state then
+                if not HasGun() then
+                    Blocker = true
+                    Notify("Erro", "Você precisa de uma arma.")
+                    return
+                end
+                Aura = true
+                Blocker = false
+                Notify("Script", "[KILL-AURA] Ativado")
+            else
+                Aura = false
+                Notify("Script", "[KILL-AURA] Desativado")
+            end
+        end
+    })
+
+    SectionKillAura:Space()
+
+local SectionArma = Mods:Section({
+        Title = "Arma"
+    })
+
+    local bulletsValue = nil
+    local spreadValue  = nil
+    local rangeValue   = nil
+
+    SectionArma:Paragraph({
+        Title = "Bullets",
+        Desc = "Modifica a quantidade de balas que saem da arma por disparo. Além disso, multiplica o dano por hit.",
+    })
+
+    SectionArma:Input({
+        Title = "Bullets",
+        Placeholder = "Valor",
+        Callback = function(v)
+            local n = tonumber(v)
+            bulletsValue = n
+            if n then
+                Notify("Bullets", "Valor: "..tostring(n))
+            else
+                Notify("Bullets", "Inválido")
+            end
+        end
+    })
+    SectionArma:Space()
+
+
+    SectionArma:Paragraph({
+        Title = "Spread",
+        Desc = "Controla a dispersão dos tiros. Quanto maior, mais espalhado os tiros sairão da arma. Quanto menor, mais juntas as balas ficarão.",
+    })
+
+    SectionArma:Input({
+        Title = "Spread",
+        Placeholder = "Valor",
+        Callback = function(v)
+            local n = tonumber(v)
+            spreadValue = n
+            if n then
+                Notify("Spread", "Valor: "..tostring(n))
+            else
+                Notify("Spread", "Inválido")
+            end
+        end
+    })
+    SectionArma:Space()
+
+
+    SectionArma:Paragraph({
+        Title = "Range",
+        Desc = "Distância pela qual o disparo consegue chegar.",
+    })
+
+    SectionArma:Input({
+        Title = "Range",
+        Placeholder = "Valor",
+        Callback = function(v)
+            local n = tonumber(v)
+            rangeValue = n
+            if n then
+                Notify("Range", "Valor: "..tostring(n))
+            else
+                Notify("Range", "Inválido")
+            end
+        end
+    })
+    SectionArma:Space()
+
+
+    SectionArma:Paragraph({
+        Title = "Aplicar mods",
+        Desc = "Aplica as modificações na arma equipada.",
+    })
+
+    SectionArma:Button({
+        Title = "Aplicar mods",
+        Callback = function()
+            if not HasGun() then
+                Notify("Erro", "Equipe uma arma para modificar.")
+                return
+            end
+
+            if bulletsValue then ModifyGun("Bullets", bulletsValue) end
+            if spreadValue then ModifyGun("Spread", spreadValue) end
+            if rangeValue then ModifyGun("Range", rangeValue) end
+
+            Notify("Mods", "Aplicações feitas.")
+        end
+    })
+end
+
+
 -- =========================
 -- Autofarm
 -- =========================
@@ -1459,6 +1474,9 @@ Cash:Input({
         end
     })
 end
+
+end -- tevez_mapa
+
 
 -- =========================
 -- 10) DISCORD
