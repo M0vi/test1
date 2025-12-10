@@ -84,19 +84,25 @@ local Window = WindUI:CreateWindow({
         Title = "Abrir o menu",
         CornerRadius = UDim.new(1,0),
         StrokeThickness = 2,
-        Enabled = true,
-        Draggable = true,
-        OnlyMobile = false,
-        Color = ColorSequence.new(
-            Color3.fromHex("#257AF7"),
-            Color3.fromHex("#000000")
-        )
+        Enabled = false,
+        Draggable = true
     },
     Topbar = {
         Height = 40,
         ButtonsType = "Mac",
     },
 })
+
+local function setupChatToggle()
+player.Chatted:Connect(function(msg)
+    if msg == "." then
+         Window:Toggle()
+      end
+   end)
+end
+
+setupChatToggle()
+
 
 Window:Tag({
     Title = "sanctuaryangels",
@@ -2262,6 +2268,19 @@ avaliar:Button({
     end
 })
 end
+
+-- Configurações
+
+local configuracoes = Outros:Tab({ Title = "Configurações", Icon = "geist:settings-gear", IconColor = Grey })
+
+configuracoes:Input({
+    Title = "Palavra secreta",
+    Desck = "Palavra ou frase que será digitada no chat para abrir / fechar a UI.",
+    Placeholder = "Ex: teste",
+    Callback = function(v)
+ --funcao aqui
+    end
+})
 
 -- =========================
 -- 12) ICONS
