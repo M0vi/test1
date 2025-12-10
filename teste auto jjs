@@ -210,8 +210,6 @@ local WalkSpeedDefault = 16
 
 -- Tevez
 
-if game.PlaceId == 13132367906 then
-
 -- =========================
 -- 7) CORE: MODS (TAB)
 -- =========================
@@ -627,10 +625,7 @@ do
         Title = "Hitbox expander"
     })
 
-    local Players_local = Players
-    local LocalPlayer = Players_local.LocalPlayer
-
-    local HitboxEnabled = false
+local HitboxEnabled = false
     local HitboxSize = Vector3.new(5,5,5)
     local HitboxTransparency = 0.5
     local ESPEnabled = false
@@ -765,10 +760,32 @@ do
         end
     end
 
+    -- ===============================
+    -- ADIÇÃO: Reaplica ao respawn
+    -- ===============================
+
+    local function OnCharacter(plr)
+        task.wait(0.15)
+        if HitboxEnabled then ApplyHitbox(plr) end
+        if ESPEnabled then ApplyESP(plr) end
+    end
+
+    -- Quando jogador entra no jogo
     Players.PlayerAdded:Connect(function(plr)
-            if HitboxEnabled then ApplyHitbox(plr) end
-            if ESPEnabled then ApplyESP(plr) end
+        if HitboxEnabled then ApplyHitbox(plr) end
+        if ESPEnabled then ApplyESP(plr) end
+
+        plr.CharacterAdded:Connect(function()
+            OnCharacter(plr)
         end)
+    end)
+
+    -- Para jogadores já existentes
+    for _, plr in ipairs(Players:GetPlayers()) do
+        plr.CharacterAdded:Connect(function()
+            OnCharacter(plr)
+        end)
+    end)
 
 
    SectionHitbox:Paragraph({
