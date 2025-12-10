@@ -1689,18 +1689,15 @@ local rodando = false
 local ultimaVenda = 0
 local DinheiroInicial = 0
 local DinheiroFarmado = 0
-local MIN_MONEY_REQUIRED = 1300 -- Define o valor mínimo
+local MIN_MONEY_REQUIRED = 1300
 
--- UI Reference (assumindo que estas variáveis são definidas pela UI TevezApenas em algum lugar)
 local FarmStatus
 
--- Mover a definição de UpdateStatus para o topo evita o erro "attempt to call a nil value"
 local function UpdateStatus(msg)
     if FarmStatus and FarmStatus.SetDesc then 
         FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
     end
 end
-
 
 local function ref()
 	char = plr.Character or plr.CharacterAdded:Wait()
@@ -1831,7 +1828,7 @@ local function farm()
     if rodando or not _G.AutoFarm then return end
     
     if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
-        UpdateStatus("FALHA: Necessário R$ " .. MIN_MONEY_REQUIRED .. " para comprar C4.")
+        UpdateStatus("Erro: Necessário R$" .. MIN_MONEY_REQUIRED .. " para comprar a C4.")
         rodando = false
         return
     end
@@ -1970,7 +1967,7 @@ FarmStatus = Cash:Paragraph({
     Buttons = {}
 })
 
-FarmStatus:SetTitle("Status do Autofarm")
+FarmStatus:SetTitle("Status do autofarm")
 UpdateStatus("Aguardando...")
 
 Cash:Toggle({
@@ -1981,7 +1978,7 @@ Cash:Toggle({
 
         if v then
             if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
-                Notify("FALHA", "Necessário R$ " .. MIN_MONEY_REQUIRED .. " para iniciar o AutoFarm.")
+                Notify("Erro", "Necessário R$" .. MIN_MONEY_REQUIRED .. " para iniciar o autofarm.")
                 Cash:Toggle({Title = "Autofarm"}):Set(false) 
                 _G.AutoFarm = false
                 return
