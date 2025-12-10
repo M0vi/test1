@@ -2201,7 +2201,7 @@ local configuracoes = Window:Tab({ Title = "Configurações", Icon = "geist:sett
 
 configuracoes:Input({
     Title = "Palavra secreta",
-    Desc = "Palavra ou frase que será digitada no chat para abrir / fechar a UI. Padrão: .",
+    Desc = "Palavra ou frase que será digitada no chat para abrir / fechar a UI. Padrão: /e",
     Placeholder = "Ex: /e",
     Callback = function(v)
         local has_space = string.find(v or "", "%s")
@@ -2223,144 +2223,58 @@ configuracoes:Input({
 })
 
 
-local ConfigManager = Window.ConfigManager
-local CONFIG_FILE_NAME = "fp3_configs"
-local CurrentConfig = ConfigManager:CreateConfig(CONFIG_FILE_NAME) 
+local KeybindKey = Enum.KeyCode.Z 
+local KeybindConnection = nil 
+local KeybindInitialized = false -- Novo controle de inicialização
 
-local ConfigDropdownElement 
-local ConfigNameInput
-
-local function getSavedConfigs()
-    local savedFiles = ConfigManager:AllConfigs()
-    local names = {}
-    for _, filename in ipairs(savedFiles) do
-        table.insert(names, filename:match("(.+)%..-")) 
+local function setupKeybind()
+    if KeybindConnection then
+        KeybindConnection:Disconnect()
+        KeybindConnection = nil
     end
-    return names
+
+    KeybindConnection = UIS.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+
+        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == KeybindKey then
+            
+            Window:Toggle()
+        end
+    end)
+    
+    if KeybindInitialized then
+        Notify("Keybind", "Keybind definida para: " .. tostring(KeybindKey))
+    end
 end
 
-local function loadConfig(configName)
-    if not configName then return end
 
-    CurrentConfig = ConfigManager:CreateConfig(configName)
-    
-    CurrentConfig:Load()
-    Notify("Configuração", "Configuração '" .. configName .. "' carregada com sucesso.")
-    CONFIG_FILE_NAME = configName
-    
-    -- ATUALIZA O DROPDOWN APÓS CARREGAR
-    refreshDropdown()
-end
-
-local function refreshDropdown()
-    local names = getSavedConfigs()
-    if ConfigDropdownElement and ConfigDropdownElement.SetValues then -- Usaremos SetValues ou Refresh
-        -- Assumindo que a sintaxe seja SetValues/Refresh com a tabela de valores
-        ConfigDropdownElement:SetValues(names) 
+configuracoes:Input({
+    Title = "Keybind",
+    Desc = "Tecla para abrir e fechar a UI (Apenas letras).",
+    Flag = "Config_Keybind",
+    Placeholder = tostring(KeybindKey),
+    Callback = function(v)
+        local keyName = string.upper(string.gsub(v or "", "%s+", ""))
         
-        if table.find(names, CurrentConfig.Name) then
-             ConfigDropdownElement:SetValue(CurrentConfig.Name)
+        if string.len(keyName) == 0 then
+            Notify("Erro", "A Keybind não pode ser vazia.")
+            return
+        end
+
+        local success, newKeybind = pcall(function()
+            return Enum.KeyCode[keyName]
+        end)
+
+        if success and newKeybind then
+            KeybindKey = newKeybind
+            setupKeybind()
+            KeybindInitialized = true
         else
-             ConfigDropdownElement:SetValue(names[1] or "Nenhuma Salva")
-        end
-    end
-    if ConfigNameInput and ConfigNameInput.SetPlaceholder then
-        ConfigNameInput:SetPlaceholder(CurrentConfig.Name)
-    end
-end
-
-
-local ConfigSection = configuracoes:Section({
-    Title = "Gerenciador de Configurações"
-})
-
-ConfigDropdownElement = ConfigSection:Dropdown({
-    Title = "Configurações Salvas",
-    Desc = "Selecione e carregue uma configuração existente.",
-    Values = getSavedConfigs(), 
-    Value = CurrentConfig.Name,
-    Callback = function(configName)
-        loadConfig(configName)
-    end
-})
-
-ConfigSection:Space()
-
-ConfigNameInput = ConfigSection:Input({
-    Title = "Nome da Configuração",
-    Desc = "Digite o nome para salvar.",
-    Placeholder = CurrentConfig.Name,
-    Callback = function(v)
-    end
-})
-
-ConfigSection:Button({
-    Title = "Salvar Configuração",
-    Desc = "Salva ou sobrescreve a configuração atual com o nome digitado acima.",
-    Callback = function()
-        local v = ConfigNameInput.Value
-        
-        local nameToSave = string.gsub(v or "", "%s+", "")
-        
-        if nameToSave == "" then
-            Notify("Erro", "Você deve fornecer um nome válido para salvar.")
-            return
-        end
-        
-        CurrentConfig = ConfigManager:CreateConfig(nameToSave)
-        CurrentConfig:Save()
-        
-        Notify("Configuração", "Configuração salva como '" .. nameToSave .. "'.")
-        
-        loadConfig(nameToSave)
-        refreshDropdown() -- CHAMA PARA INCLUIR O NOVO NOME
-    end
-})
-
-ConfigSection:Space()
-
-ConfigSection:Button({
-    Title = "Deletar Configuração Atual",
-    Desc = "Exclui a configuração atualmente selecionada.",
-    Callback = function()
-        if CurrentConfig.Name == "fp3_configs" then
-            Notify("Erro", "Não é possível deletar a configuração padrão (fp3_configs).")
-            return
-        end
-        
-        local deletedName = CurrentConfig.Name
-        
-        CurrentConfig:Delete() 
-        Notify("Configuração", "Configuração '" .. deletedName .. "' deletada.")
-        
-        loadConfig("fp3_configs")
-        refreshDropdown() -- CHAMA PARA REMOVER O NOME DELETADO
-    end
-})
-
-ConfigSection:Space()
-
-ConfigSection:Toggle({
-    Title = "Autoload (Padrão)",
-    Desc = "Carrega a última configuração salva automaticamente ao iniciar o script.",
-    Default = true, 
-    Callback = function(v)
-        if v then
-            loadConfig("fp3_configs")
-            Notify("Autoload", "Configuração padrão carregada.")
+            Notify("Erro", "Tecla '" .. keyName .. "' inválida. Use apenas letras (A-Z).")
         end
     end
 })
 
-
-refreshDropdown()
-loadConfig(CONFIG_FILE_NAME)
-
-
-
--- =========================
--- 12) ICONS
--- =========================
 
 do
     local TestSection = Window:Section({
