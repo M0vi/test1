@@ -1483,9 +1483,6 @@ local function tp(v)
 	end
 end
 
-----------------------------------------------------------------
--- SAFEZONE
-----------------------------------------------------------------
 local SAFE = WS:FindFirstChild("SAFEZONE")
 if not SAFE then
 	SAFE = Instance.new("Part")
@@ -1493,9 +1490,9 @@ if not SAFE then
 	SAFE.Size = Vector3.new(45,12,45)
 	SAFE.Anchored = true
 	SAFE.CanCollide = true
-	SAFE.Transparency = 0.15
-	SAFE.Material = Enum.Material.SmoothPlastic
-	SAFE.BrickColor = BrickColor.new("Really black")
+	SAFE.Transparency = 0.7
+    SAFE.Material = Enum.Material.ForceField
+    SAFE.Color = Color3.fromRGB(80, 170, 255)
 	SAFE.Position = CollectPos - Vector3.new(0,30,0)
 	SAFE.Parent = WS
 end
@@ -1504,9 +1501,6 @@ local function tps()
 	tp(SAFE.Position + Vector3.new(0, SAFE.Size.Y/2 + 4, 0))
 end
 
-----------------------------------------------------------------
--- UTILS
-----------------------------------------------------------------
 local function item(n)
 	local b = plr:FindFirstChild("Backpack")
 	return (b and b:FindFirstChild(n)) or (char and char:FindFirstChild(n))
@@ -1727,7 +1721,6 @@ end)
 plr.CharacterAdded:Connect(function()
 	task.wait(0.5)
 	ref()
-	enableAntiVoid()
 end)
 
 farm()
