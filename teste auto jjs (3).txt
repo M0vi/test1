@@ -622,9 +622,6 @@ do
         Title = "Hitbox expander"
     })
 
-    local Players_local = Players
-    local LocalPlayer = Players_local.LocalPlayer
-
     local HitboxEnabled = false
     local HitboxSize = Vector3.new(5,5,5)
     local HitboxTransparency = 0.5
@@ -644,7 +641,7 @@ do
         HRP.CanCollide = true
         HRP.Massless = false
 
-        local hl = HRP:FindFirstChild("Highlight_HB")
+        local hl = HRP:FindFirstChild("a")
         if hl then hl:Destroy() end
     end
 
@@ -662,11 +659,11 @@ do
         HRP.CanCollide = false
         HRP.Massless = false
 
-        local old = HRP:FindFirstChild("Highlight_HB")
+        local old = HRP:FindFirstChild("a")
         if old then old:Destroy() end
 
         local hl = Instance.new("Highlight")
-        hl.Name = "Highlight_HB"
+        hl.Name = "a"
         hl.Parent = HRP
         hl.FillColor = plr.TeamColor.Color
         hl.OutlineColor = plr.TeamColor.Color
@@ -753,7 +750,7 @@ do
     end
 
     local function RefreshAll()
-        for _,plr in ipairs(Players_local:GetPlayers()) do
+        for _,plr in ipairs(Players:GetPlayers()) do
             if HitboxEnabled then ApplyHitbox(plr) else ResetHitbox(plr) end
             ClearESP(plr)
             if ESPEnabled then ApplyESP(plr) end
@@ -768,6 +765,13 @@ do
         end)
     end)
 
+for _, plr in ipairs(Players:GetPlayers()) do
+    plr.CharacterAdded:Connect(function()
+        task.wait(1)
+        if HitboxEnabled then ApplyHitbox(plr) end
+        if ESPEnabled then ApplyESP(plr) end
+    end)
+end
 
    SectionHitbox:Paragraph({
         Title = "Modificar hitbox",
