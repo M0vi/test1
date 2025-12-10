@@ -51,6 +51,10 @@ local LocalizationService = game:GetService("LocalizationService")
 local Player = Players.LocalPlayer
 local player = Players.LocalPlayer
 
+-- mapas
+
+local TEVEZ_MAPA = game.PlaceId == 13132367906
+
 -- Loader
 local WindUI
 do
@@ -160,6 +164,13 @@ end
 -- =========================
 local ElementsSection = Window:Section({
     Title = "Scripts",
+})
+
+    local TevezApenas = Window:Section({
+    Title = "[EB] Tevez",
+    Desc = "Exclusivos do jogo",
+    Icon = "lucide:gamepad-2",
+    IconColor = Color3.fromHex("#1C3811")
 })
 
 local Outros = Window:Section({
@@ -1256,20 +1267,9 @@ local Extras = Auto:Section({
 end
 
 
--- TUDO TEVEZ!!!
-
-local TEVEZ_MAPA = game.PlaceId == 13132367906
-
+-- TUDO TEVEZ!!
 
 if TEVEZ_MAPA then
-
-do
-    local TevezApenas = Window:Section({
-    Title = "[EB] Tevez",
-    Desc = "Exclusivos do jogo",
-    Icon = "lucide:gamepad-2",
-    IconColor = Color3.fromHex("#1C3811")
-})
 
 -- KILL AURA
 
@@ -1430,7 +1430,7 @@ trackTask(task.spawn(function()
     end
 end))
 
--- UI AUTOFARM
+-- UI MODS TEVEZ
 
 do
     local TevezMods = TevezApenas:Tab({
@@ -1444,28 +1444,51 @@ do
     })
 
     SectionKillAura:Paragraph({
-        Title = "Kill Aura",
+        Title = "Kill Aura [RISCO DE BAN]",
+        Color = Color3.fromHex("#FF1D0D"),
         Desc = "Enquanto estiver com a arma, mata todos os inimigos ao redor de você. Não mata inimigos em safezones.",
     })
 
-    SectionKillAura:Toggle({
-        Title = "Kill-aura",
-        Callback = function(state)
-            if state then
-                if not HasGun() then
-                    Blocker = true
-                    Notify("Erro", "Você precisa de uma arma.")
-                    return
-                end
-                Aura = true
-                Blocker = false
-                Notify("Script", "[KILL-AURA] Ativado")
-            else
-                Aura = false
-                Notify("Script", "[KILL-AURA] Desativado")
-            end
+local KillAuraToggle
+
+SectionKillAura:Toggle({
+    Title = "Permitir",
+    Desc = "O uso de kill aura é de sua conta e risco, você será banido caso for denunciado. Use uma alt.",
+    Callback = function(state)
+        if state then
+            KillAuraToggle:Unlock()
+            Notify("Permissão", "Concedida")
+        else
+            KillAuraToggle:Set(false) 
+            
+            KillAuraToggle:Lock()
+            Notify("Permissão", "Negada.")
         end
-    })
+    end
+})
+
+KillAuraToggle = SectionKillAura:Toggle({
+    Title = "Kill-aura [RISCO DE BAN]",
+    Callback = function(state)
+        if state then
+            if not HasGun() then
+                Blocker = true
+                KillAuraToggle:Set(false)
+                Notify("Erro", "Você precisa de uma arma.")
+                return
+            end
+            Aura = true
+            Blocker = false
+            Notify("Script", "[KILL-AURA] Ativado")
+        else
+            Aura = false
+            Notify("Script", "[KILL-AURA] Desativado")
+        end
+    end
+})
+
+KillAuraToggle:Lock()
+
 
     SectionKillAura:Space()
 
@@ -1915,7 +1938,6 @@ if v == "" then return end
 })
 
 end -- Section do Tevez
-end -- tevez_mapa
 
 
 -- =========================
