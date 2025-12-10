@@ -1697,7 +1697,6 @@ local Remotes = RS.Assets.Remotes
 local BuyShop = Remotes.BuyShop
 local Robbery = Remotes.Robbery
 
--- Variáveis de controle de estado (Mantidas, mas controladas)
 local rodando = false
 local ultimaVenda = 0
 local DinheiroInicial = 0
@@ -1711,6 +1710,7 @@ local function UpdateStatus(msg)
         FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
     end
 end
+
 
 local function ref()
 	char = plr.Character or plr.CharacterAdded:Wait()
@@ -1841,7 +1841,7 @@ local function farm()
     if rodando or not _G.AutoFarm then return end
     
     if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
-        UpdateStatus("Erro: Necessário R$" .. MIN_MONEY_REQUIRED .. " para comprar a C4.")
+        UpdateStatus("FALHA: Necessário R$" .. MIN_MONEY_REQUIRED .. " para comprar C4.")
         rodando = false
         return
     end
@@ -1960,8 +1960,6 @@ plr.CharacterAdded:Connect(function()
 	ref()
 end)
 
--- Autofarm UI
-
 local Cash = TevezApenas:Tab({
     Title = "Autofarm",
     Icon = "lucide:wallet",
@@ -1980,10 +1978,10 @@ FarmStatus = Cash:Paragraph({
     Buttons = {}
 })
 
-FarmStatus:SetTitle("Status do autofarm")
+FarmStatus:SetTitle("Status do Autofarm")
 UpdateStatus("Aguardando...")
 
-Cash:Toggle({
+local AutofarmToggle = Cash:Toggle({
     Title = "Autofarm",
     Desc = "Ativa ou desativa o autofarm.",
     Callback = function(v)
@@ -1992,7 +1990,7 @@ Cash:Toggle({
         if v then
             if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
                 Notify("Erro", "Necessário R$" .. MIN_MONEY_REQUIRED .. " para iniciar o autofarm.")
-                Cash:Toggle({Title = "Autofarm"}):Set(false) 
+                AutofarmToggle:Set(false) 
                 _G.AutoFarm = false
                 return
             end
@@ -2031,7 +2029,7 @@ Cash:Input({
             return
         end
         RaioDeSeguranca = n
-        Notify("Valor:", ""..tostring(n))
+        Notify("NOVO VALOR", ""..tostring(n))
     end
 })
 end -- Section do Tevez
@@ -2280,9 +2278,9 @@ end
 
 local configuracoes = Window:Tab({ Title = "Configurações", Icon = "geist:settings-gear", IconColor = Grey })
 
-Configuracoes:Input({
+configuracoes:Input({
     Title = "Palavra secreta",
-    Desck = "Palavra ou frase que será digitada no chat para abrir / fechar a UI. Padrão: .",
+    Desc = "Palavra ou frase que será digitada no chat para abrir / fechar a UI. Padrão: .",
     Placeholder = "Ex: .",
     Callback = function(v)
         local has_space = string.find(v or "", "%s")
