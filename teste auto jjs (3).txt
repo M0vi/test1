@@ -182,42 +182,10 @@ end
 local function notif(t, d) Notify(t, d) end
 local function notif_af(t, d) Notify(t, d) end
 
--- =========================
--- 7) CORE: MODS (TAB)
--- =========================
-local GS = Replicated:WaitForChild("GunSystem")
-local GC = GS:WaitForChild("GunsConfigurations")
-local FireEvent = GS.Remotes.Events.Fire
-local ReloadFunction = GS.Remotes.Functions.Reload
-
-local Active = true
-local Aura = false
-local Blocker = false
-local Connections = {}
-local Tasks = {}
-local LastTargetTime = 0
 local WalkSpeedDefault = 16
 local NoClipConn = nil
 local CanCollide = true
 
-local function track(c) table.insert(Connections, c) end
-local function trackTask(t) table.insert(Tasks, t) end
-local function reg(target) LastTargetTime = tick() end
-
-local function HasGun()
-    local bp = Player:FindFirstChild("Backpack")
-    local char = Player.Character
-
-    for _, cfg in ipairs(GC:GetChildren()) do
-        local n = cfg.Name
-        if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
-            return true
-        end
-    end
-    return false
-end
-
--- Aplica o bypass de speed e jp
 if Player.Character then
     local hum = Player.Character:FindFirstChildOfClass("Humanoid")
     if hum then bypass(hum) end
@@ -237,6 +205,38 @@ local function NoClip()
             end
         end
     end
+end
+
+
+-- Somente do Tevez
+
+local GS = Replicated:WaitForChild("GunSystem")
+local GC = GS:WaitForChild("GunsConfigurations")
+local FireEvent = GS.Remotes.Events.Fire
+local ReloadFunction = GS.Remotes.Functions.Reload
+
+local Active = true
+local Aura = false
+local Blocker = false
+local Connections = {}
+local Tasks = {}
+local LastTargetTime = 0
+
+local function track(c) table.insert(Connections, c) end
+local function trackTask(t) table.insert(Tasks, t) end
+local function reg(target) LastTargetTime = tick() end
+
+local function HasGun()
+    local bp = Player:FindFirstChild("Backpack")
+    local char = Player.Character
+
+    for _, cfg in ipairs(GC:GetChildren()) do
+        local n = cfg.Name
+        if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
+            return true
+        end
+    end
+    return false
 end
 
 -- Pega a info da arma
@@ -366,6 +366,8 @@ trackTask(task.spawn(function()
         task.wait()
     end
 end))
+-- encerra as coisas de somente tevez!
+
 
 -- =========================
 -- 8) TAB - Mods (UI)
@@ -378,9 +380,7 @@ do
         IconColor = Blue,
     })
 
-    -----------------------------------------------------------
-    -- SECTION 1: KILL-AURA
-    -----------------------------------------------------------
+-- Somente Tevez
     local SectionKillAura = TabA:Section({
         Title = "Kill Aura"
     })
@@ -508,6 +508,7 @@ do
     })
     SectionArma:Space()
 
+-- encerra somente Tevez novamente!
 
     -----------------------------------------------------------
     -- SECTION 3: PLAYER (Noclip + Speed)
