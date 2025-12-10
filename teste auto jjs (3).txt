@@ -1590,15 +1590,18 @@ end
 local rodando = false
 
 local function farm()
-	if rodando or not _G.AutoFarm then return end
-	rodando = true
+    if rodando or not _G.AutoFarm then return end
+    rodando = true
 
-	UpdateStatus("Esperando o banco abrir...")
+    if aberto() then
+        UpdateStatus("Banco aberto! Iniciando...")
+    else
+        UpdateStatus("Esperando o banco abrir...")
+    end
 
-	task.spawn(function()
-
-		repeat task.wait(0.2) until aberto() or not _G.AutoFarm
-		if not _G.AutoFarm then rodando = false return end
+    task.spawn(function()
+        repeat task.wait(0.2) until aberto() or not _G.AutoFarm
+        if not _G.AutoFarm then rodando = false return end
 
 		UpdateStatus("Banco abriu! Indo comprar a C4...")
 
