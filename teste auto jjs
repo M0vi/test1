@@ -182,41 +182,6 @@ end
 local function notif(t, d) Notify(t, d) end
 local function notif_af(t, d) Notify(t, d) end
 
--- =========================
--- 7) CORE: MODS (TAB)
--- =========================
-local GS = Replicated:WaitForChild("GunSystem")
-local GC = GS:WaitForChild("GunsConfigurations")
-local FireEvent = GS.Remotes.Events.Fire
-local ReloadFunction = GS.Remotes.Functions.Reload
-
-local Active = true
-local Aura = false
-local Blocker = false
-local Connections = {}
-local Tasks = {}
-local LastTargetTime = 0
-local WalkSpeedDefault = 16
-local NoClipConn = nil
-local CanCollide = true
-
-local function track(c) table.insert(Connections, c) end
-local function trackTask(t) table.insert(Tasks, t) end
-local function reg(target) LastTargetTime = tick() end
-
-local function HasGun()
-    local bp = Player:FindFirstChild("Backpack")
-    local char = Player.Character
-
-    for _, cfg in ipairs(GC:GetChildren()) do
-        local n = cfg.Name
-        if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
-            return true
-        end
-    end
-    return false
-end
-
 -- Aplica o bypass de speed e jp
 if Player.Character then
     local hum = Player.Character:FindFirstChildOfClass("Humanoid")
@@ -237,6 +202,46 @@ local function NoClip()
             end
         end
     end
+end
+
+local NoClipConn = nil
+local CanCollide = true
+local WalkSpeedDefault = 16
+
+-- Tevez
+
+if game.PlaceId == 13132367906 then
+
+-- =========================
+-- 7) CORE: MODS (TAB)
+-- =========================
+local GS = Replicated:WaitForChild("GunSystem")
+local GC = GS:WaitForChild("GunsConfigurations")
+local FireEvent = GS.Remotes.Events.Fire
+local ReloadFunction = GS.Remotes.Functions.Reload
+
+local Active = true
+local Aura = false
+local Blocker = false
+local Connections = {}
+local Tasks = {}
+local LastTargetTime = 0
+
+local function track(c) table.insert(Connections, c) end
+local function trackTask(t) table.insert(Tasks, t) end
+local function reg(target) LastTargetTime = tick() end
+
+local function HasGun()
+    local bp = Player:FindFirstChild("Backpack")
+    local char = Player.Character
+
+    for _, cfg in ipairs(GC:GetChildren()) do
+        local n = cfg.Name
+        if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
+            return true
+        end
+    end
+    return false
 end
 
 -- Pega a info da arma
@@ -366,6 +371,7 @@ trackTask(task.spawn(function()
         task.wait()
     end
 end))
+end
 
 -- =========================
 -- 8) TAB - Mods (UI)
@@ -378,9 +384,7 @@ do
         IconColor = Blue,
     })
 
-    -----------------------------------------------------------
-    -- SECTION 1: KILL-AURA
-    -----------------------------------------------------------
+if game.PlaceId == 13132367906 then
     local SectionKillAura = TabA:Section({
         Title = "Kill Aura"
     })
@@ -413,7 +417,7 @@ do
 
 
     -----------------------------------------------------------
-    -- SECTION 2: ARMA (Bullets, Spread, Range)
+    -- Section 2
     -----------------------------------------------------------
     local SectionArma = TabA:Section({
         Title = "Arma"
@@ -507,10 +511,10 @@ do
         end
     })
     SectionArma:Space()
-
+end
 
     -----------------------------------------------------------
-    -- SECTION 3: PLAYER (Noclip + Speed)
+    -- SECTION 3
     -----------------------------------------------------------
     local SectionPlayer = TabA:Section({
         Title = "Player"
@@ -760,12 +764,14 @@ do
     end
 
     Players.PlayerAdded:Connect(function(plr)
-        plr.CharacterAdded:Connect(function()
-            task.wait(1)
             if HitboxEnabled then ApplyHitbox(plr) end
             if ESPEnabled then ApplyESP(plr) end
         end)
-    end)
+
+Players.CharacterAdded:Connect(function(plr)
+            if HitboxEnabled then ApplyHitbox(plr) end
+            if ESPEnabled then ApplyESP(plr) end
+        end)
 
 
    SectionHitbox:Paragraph({
@@ -1408,10 +1414,10 @@ if Response and Response.guild then
 
     DiscordTab:Paragraph({
         Title = tostring(Response.guild.name),
-        Desc = "Servidor de exploits para Roblox",
+        Desc = "Servidor do script",
         Image = "https://cdn.discordapp.com/icons/" .. Response.guild.id .. "/" .. Response.guild.icon .. ".png?size=1024",
-        Thumbnail = "https://i.pinimg.com/1200x/63/8c/5e/638c5e9084688a81fdf74200e85c655c.jpg",
-        ImageSize = 80,
+        Thumbnail = "https://i.pinimg.com/1200x/b3/bf/51/b3bf51462e0b56eaa4fd262bf1a1bd4c.jpg",
+        ImageSize = 85,
         Buttons = {
             {
                 Title = "Copiar link!",
