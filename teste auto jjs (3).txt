@@ -373,31 +373,41 @@ TabA:Space()
 local Antispawn = false
 local DeathCFrame = nil
 
-local function onCharacterAdded(Character)
-    if Antispawn and DeathCFrame then
-        task.defer(function()
-            if Character and Character:FindFirstChild("HumanoidRootPart") then
-                Character:PivotTo(DeathCFrame)
-            end
-        end)
-    end
+local Players = game:GetService("Players")
 
-    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-    if Humanoid then
-        Humanoid.Died:Connect(function()
-            if Antispawn and Character and Character:FindFirstChild("HumanoidRootPart") then
-                DeathCFrame = Character.HumanoidRootPart.CFrame
-            else
-                DeathCFrame = nil
-            end
-        end)
+local player = Players.LocalPlayer
+
+local function onCharacterDied()
+	local character = player.Character
+    
+    if not Antispawn then
+        DeathCFrame = nil
+        return
     end
+    
+	if character and character:FindFirstChild("HumanoidRootPart") then
+		DeathCFrame = character.HumanoidRootPart.CFrame
+	end
 end
 
-if Player.Character then
-    onCharacterAdded(Player.Character)
+local function onCharacterAdded(character)
+	local humanoid = character:WaitForChild("Humanoid")
+	
+	humanoid.Died:Connect(onCharacterDied)
+
+	if Antispawn and DeathCFrame then
+		local hrp = character:WaitForChild("HumanoidRootPart")
+        
+        task.wait(0.05)
+        
+		hrp.CFrame = DeathCFrame
+	end
 end
-Player.CharacterAdded:Connect(onCharacterAdded)
+
+player.CharacterAdded:Connect(onCharacterAdded)
+if player.Character then
+	onCharacterAdded(player.Character)
+end
 
 TabA:Toggle({
     Title = "Anti-spawn",
@@ -405,10 +415,12 @@ TabA:Toggle({
     Callback = function(v)
         Antispawn = v
         if not v then
-            DeathCFrame = nil -- Limpa a CFrame salva ao desativar
+            DeathCFrame = nil
         end
     end
 })
+
+
 
 TabA:Space()
 
