@@ -642,60 +642,143 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-   SectionHitbox:Paragraph({
-        Title = "Modificar hitbox",
-        Desc = "Altera o tamanho e visual da hitbox dos inimigos.",
-    })
 
-    SectionHitbox:Toggle({
-        Title = "Hitbox",
-        Callback = function(v)
-            HitboxEnabled = v
-            RefreshAll()
-        end
-    })
 
-    SectionHitbox:Space()
+-- HB expander
 
-    SectionHitbox:Paragraph({
-        Title = "Tamanho da hitbox",
-        Desc = "Valor que será usado para alterar a hitbox dos inimigos.",
-    })
+local HitboxEnabled = false
+local HitboxSize = Vector3.new(5,5,5) 
+local HitboxTransparency = 0.5
 
-    SectionHitbox:Input({
-        Title = "Tamanho da hitbox",
-        Placeholder = "Ex: 10",
-        Callback = function(v)
-if v == "" then return end
-            local n = tonumber(v)
-            if not n then return end
+local function ResetHitbox(plr)
+    if plr == LocalPlayer then return end
+    local char = plr.Character
+    if not char then return end
 
-            HitboxSize = Vector3.new(n,n,n)
-            RefreshAll()
-        end
-    })
+    local HRP = char:FindFirstChild("HumanoidRootPart")
+    if not HRP then return end
 
-    SectionHitbox:Space()
+    HRP.Size = Vector3.new(2,2,1) 
+    HRP.Transparency = 0
+    HRP.CanCollide = true
+    HRP.Massless = false
 
-    SectionHitbox:Paragraph({
-        Title = "Transparência",
-        Desc = "Determina o quão visível a hitbox ficará. 0 = visível; 1 = invisível.",
-    })
+    local hl = HRP:FindFirstChild("a")
+    if hl then hl:Destroy() end
+end
 
-    SectionHitbox:Slider({
-        Title = "Transparência",
-        Step = 0.02,
-        Value = {
-            Min = 0,
-            Max = 1,
-            Default = 0.5,
-        },
-        Callback = function(val)
-            HitboxTransparency = val
-            RefreshAll()
-        end
-    })
+local function ApplyHitbox(plr)
+    if not HitboxEnabled then return end
+    if plr == LocalPlayer then return end
+    if plr.Team == LocalPlayer.Team then return end 
+    if not plr.Character then return end
+
+    local HRP = plr.Character:FindFirstChild("HumanoidRootPart")
+    if not HRP then return end
+
+    HRP.Size = HitboxSize
+    HRP.Transparency = HitboxTransparency
+    HRP.CanCollide = false
+    HRP.Massless = false
+
+    local old = HRP:FindFirstChild("a")
+    if old then old:Destroy() end 
+
+    local hl = Instance.new("Highlight")
+    hl.Name = "a"
+    hl.Parent = HRP
+    hl.FillColor = plr.TeamColor.Color
+    hl.OutlineColor = plr.TeamColor.Color
+    hl.FillTransparency = 1 - HitboxTransparency
+    hl.OutlineTransparency = HitboxTransparency
+end
+
+local function RefreshAll()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if HitboxEnabled then ApplyHitbox(plr) else ResetHitbox(plr) end 
+    end
+end
+
+local function HandleCharacter(character)
+    local plr = Players:GetPlayerFromCharacter(character)
+    if not plr then return end
+    
+    if HitboxEnabled then
+        ApplyHitbox(plr)
+    else
+        ResetHitbox(plr)
+    end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function(character)
+        task.wait(1)
+        HandleCharacter(character)
+    end) 
+    if plr.Character then
+        HandleCharacter(plr.Character)
+    end
+end)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr.Character then
+        HandleCharacter(plr.Character)
+    end
+    plr.CharacterAdded:Connect(function(character)
+        task.wait(1)
+        HandleCharacter(character)
+    end)
+end
+
+
+SectionHitbox:Paragraph({
+    Title = "Modificar hitbox",
+    Desc = "Altera o tamanho e visual da hitbox dos inimigos.",
+})
+
+SectionHitbox:Toggle({
+    Title = "Hitbox",
+    Callback = function(v)
+        HitboxEnabled = v
+        RefreshAll()
+    end
+})
+
+SectionHitbox:Input({
+    Title = "Tamanho da hitbox",
+    Desc = "Valor usado para mudar a hitbox dos inimigos.",
+    Placeholder = "Ex: 10",
+    Callback = function(v)
+        if v == "" then return end
+        local n = tonumber(v)
+        if not n then return end
+
+        HitboxSize = Vector3.new(n,n,n)
+        RefreshAll()
+    end
+})
+
 SectionHitbox:Space()
+
+SectionHitbox:Paragraph({
+    Title = "Transparência",
+    Desc = "Determina o quão visível a hitbox ficará. 0 = visível; 1 = invisível.",
+})
+
+SectionHitbox:Slider({
+    Title = "Transparência",
+    Step = 0.02,
+    Value = {
+        Min = 0,
+        Max = 1,
+        Default = 0.5,
+    },
+    Callback = function(val)
+        HitboxTransparency = val
+        RefreshAll()
+    end
+})
+
 
 local SectionESP = TabB:Section({
         Title = "ESP"
