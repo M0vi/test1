@@ -214,8 +214,8 @@ end
 
 do
     local TabA = ElementsSection:Tab({
-        Title = "Mods",
-        Icon = "geist:robot",
+        Title = "Player",
+        Icon = "lucide:ellipsis-vertical",
         IconColor = Blue,
     })
 
@@ -1139,8 +1139,8 @@ do
     local TevezApenas = Window:Section({
     Title = "[EB] Tevez",
     Desc = "Exclusivos do jogo",
-    Icon = "lucide:bell",
-    IconColor = Yellow
+    Icon = "lucide:gamepad-2",
+    IconColor = Color3.fromHex("#033605")
 })
 
 -- KILL AURA
@@ -1308,8 +1308,8 @@ end))
 do
     local TevezMods = TevezApenas:Tab({
         Title = "Mods",
-        Icon = "lucide:keyboard",
-        IconColor = Red
+        Icon = "lucide:chevrons-left-right-ellipsis",
+        IconColor = Color3.fromHex("#C012FF")
     })
 
     local SectionKillAura = TevezMods:Section({
@@ -1443,8 +1443,8 @@ end
 do
     local Cash = TevezApenas:Tab({
         Title = "Autofarm",
-        Icon = "lucide:keyboard",
-        IconColor = Red
+        Icon = "lucide:wallet",
+        IconColor = Color3.fromHex("#12FF1A")
     })
 
 Cash:Toggle({
