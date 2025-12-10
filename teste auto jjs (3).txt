@@ -1136,13 +1136,12 @@ local TEVEZ_MAPA = game.PlaceId == 13132367906
 if TEVEZ_MAPA then
 
 do
-    local SomenteTevez = Window:Tab({
-        Title = "[EB] Tevez",
-        Desc = "Exclusivos do jogo",
-        Icon = "lucide:bell",
-        IconColor = Yellow
+    local TevezApenas = Window:Section({
+    Title = "[EB] Tevez",
+    Desc = "Exclusivos do jogo",
+    Icon = "lucide:bell",
+    IconColor = Yellow
 })
-end
 
 -- KILL AURA
 
@@ -1307,13 +1306,13 @@ end))
 -- UI AUTOFARM
 
 do
-    local Mods = SomenteTevez:Tab({
+    local TevezMods = TevezApenas:Tab({
         Title = "Mods",
         Icon = "lucide:keyboard",
         IconColor = Red
     })
 
-    local SectionKillAura = Mods:Section({
+    local SectionKillAura = TevezMods:Section({
         Title = "Kill Aura"
     })
 
@@ -1343,7 +1342,7 @@ do
 
     SectionKillAura:Space()
 
-local SectionArma = Mods:Section({
+local SectionArma = TevezMods:Section({
         Title = "Arma"
     })
 
@@ -1442,7 +1441,7 @@ end
 -- =========================
 
 do
-    local Cash = SomenteTevez:Tab({
+    local Cash = TevezApenas:Tab({
         Title = "Autofarm",
         Icon = "lucide:keyboard",
         IconColor = Red
@@ -1475,6 +1474,7 @@ Cash:Input({
     })
 end
 
+end -- Section do Tevez
 end -- tevez_mapa
 
 
