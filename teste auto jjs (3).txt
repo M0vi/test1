@@ -1140,7 +1140,7 @@ do
     Title = "[EB] Tevez",
     Desc = "Exclusivos do jogo",
     Icon = "lucide:gamepad-2",
-    IconColor = Color3.fromHex("#033605")
+    IconColor = Color3.fromHex("#1C3811")
 })
 
 -- KILL AURA
@@ -2021,7 +2021,7 @@ do
     local TestSection = Window:Section({
         Title = "Feito com carinho",
         Icon = "geist:heart",
-        IconColor = Red
+        IconColor = Color3.fromHex("#fA1616")
     })
 end
 
