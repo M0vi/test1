@@ -1705,8 +1705,6 @@ plr.CharacterAdded:Connect(function()
 	ref()
 end)
 
-farm()
-
 -- Autofarm UI
 
 local Cash = TevezApenas:Tab({
@@ -1731,7 +1729,7 @@ local DinheiroInicial = 0
 local DinheiroFarmado = 0
 
 local function UpdateStatus(msg)
-    FarmStatus:SetDesc("📢 Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
+    FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
 end
 
 FarmStatus:SetTitle("Status do Autofarm")
@@ -1743,12 +1741,13 @@ Cash:Toggle({
     Callback = function(v)
         _G.AutoFarm = v
         if v then
+            rodando = false
             DinheiroInicial = (plr.leaderstats and plr.leaderstats.Dinheiro.Value) or 0
             DinheiroFarmado = 0
-            UpdateStatus("Autofarm iniciado")
+            UpdateStatus("Autofarm iniciado.")
             farm()
         else
-            UpdateStatus("Autofarm desativado")
+            UpdateStatus("Autofarm encerrado.")
         end
     end
 })
