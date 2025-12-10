@@ -1136,12 +1136,12 @@ local TEVEZ_MAPA = game.PlaceId == 13132367906
 if TEVEZ_MAPA then
 
 do
-    local SomenteTevez = Window:Section({
-        Title = "[EB] TEVEZ",
-        Icon = "geist:heart",
-        IconColor = Red
+    local SomenteTevez = Window:Tab({
+        Title = "[EB] Tevez",
+        Desc = "Exclusivos do jogo",
+        Icon = "lucide:bell",
+        IconColor = Yellow
     })
-end
 
 
 -- KILL AURA
