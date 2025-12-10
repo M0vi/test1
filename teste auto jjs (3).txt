@@ -608,6 +608,7 @@ SectionPlayer:Paragraph({
         end
     })
 end
+
 -- =========================
 -- 9) Hitbox e ESP
 -- =========================
@@ -622,6 +623,7 @@ do
         Title = "Hitbox expander"
     })
 
+    local LocalPlayer = Players.LocalPlayer
     local HitboxEnabled = false
     local HitboxSize = Vector3.new(5,5,5)
     local HitboxTransparency = 0.5
