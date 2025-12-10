@@ -219,18 +219,99 @@ do
         IconColor = Blue,
     })
 
-    local SectionPlayer = TabA:Section({
-        Title = "Player"
-    })
+--fly
+
+local fly = false
+local flySpeed = 15
+local CFloop = nil
+
+local function toggleFly(v)
+    local Character = Player.Character
+    if not Character then return end
+
+    local Humanoid = Character:FindFirstChildOfClass('Humanoid')
+    local Head = Character:WaitForChild("Head", 0.5)
+
+    if not Humanoid or not Head then return end
+
+    if v then
+        fly = true
+        
+        if CFloop then CFloop:Disconnect() end
+        
+        Humanoid.PlatformStand = true
+        Head.Anchored = true
+        
+        local currentSpeed = flySpeed or 15
+        
+        CFloop = RunService.Heartbeat:Connect(function(deltaTime)
+            local moveDirection = Humanoid.MoveDirection * (currentSpeed * deltaTime)
+            
+            local headCFrame = Head.CFrame
+            local camera = workspace.CurrentCamera
+            local cameraCFrame = camera.CFrame
+            
+            local cameraOffset = headCFrame:ToObjectSpace(cameraCFrame).Position
+            cameraCFrame = cameraCFrame * CFrame.new(-cameraOffset.X, -cameraOffset.Y, -cameraOffset.Z + 1)
+            local cameraPosition = cameraCFrame.Position
+            local headPosition = headCFrame.Position
+
+            local objectSpaceVelocity = CFrame.new(cameraPosition, Vector3.new(headPosition.X, cameraPosition.Y, headPosition.Z)):VectorToObjectSpace(moveDirection)
+            Head.CFrame = CFrame.new(headPosition) * (cameraCFrame - cameraPosition) * CFrame.new(objectSpaceVelocity)
+        end)
+        
+        Notify("Fly", "Ativado com velocidade: " .. tostring(currentSpeed))
+
+    else
+        fly = false
+        if CFloop then 
+            CFloop:Disconnect() 
+            CFloop = nil
+        end
+        
+        Humanoid.PlatformStand = false
+        Head.Anchored = false
+        
+        Notify("Fly", "Desativado")
+    end
+end
+
+TabA:Toggle({
+    Title = "Fly",
+    Desc = "Burla a maioria dos anticheats.",
+    Callback = function(v)
+        toggleFly(v)
+    end
+})
+
+TabA:Input({
+    Title = "Fly speed",
+    Placeholder = "Valor",
+    Callback = function(v)
+        if v == "" then return end
+        local n = tonumber(v)
+        if n and n > 0 then
+            flySpeed = n
+            Notify("Fly", "Valor: "..tostring(n))
+            if fly then
+                toggleFly(false)
+                toggleFly(true)
+            end
+        else
+            Notify("Fly", "Inválido")
+        end
+    end
+})
+TabA:Space()
 
     local speedValue = nil
 
-    SectionPlayer:Paragraph({
+    TabA:Paragraph({
         Title = "Speed",
-        Desc = "Modifica a velocidade do personagem.",
+        Desc = "Modifica a velocidade do personagem. Burla a maioria dos anticheats.",
     })
 
-    SectionPlayer:Input({
+    TabA:Input({
         Title = "Speed",
         Placeholder = "Valor",
         Callback = function(v)
@@ -244,15 +325,15 @@ if v == "" then return end
             end
         end
     })
-    SectionPlayer:Space()
+    TabA:Space()
 
 
-    SectionPlayer:Paragraph({
+    TabA:Paragraph({
         Title = "Aplicar velocidade",
         Desc = "Aplica a velocidade determinada.",
     })
 
-    SectionPlayer:Button({
+    TabA:Button({
         Title = "Aplicar velocidade",
         Callback = function()
             if not speedValue then
@@ -269,15 +350,15 @@ if v == "" then return end
             end
         end
     })
-    SectionPlayer:Space()
+    TabA:Space()
 
 
-    SectionPlayer:Paragraph({
+    TabA:Paragraph({
         Title = "Resetar speed",
         Desc = "Retoma a velocidade padrão (16) do personagem.",
     })
 
-    SectionPlayer:Button({
+    TabA:Button({
         Title = "Resetar speed",
         Callback = function()
             local h = Player.Character and Player.Character:FindFirstChild("Humanoid")
@@ -287,14 +368,56 @@ if v == "" then return end
             end
         end
     })
-SectionPlayer:Space()
+TabA:Space()
 
-SectionPlayer:Paragraph({
+local Antispawn = false
+local DeathCFrame = nil
+
+local function onCharacterAdded(Character)
+    if Antispawn and DeathCFrame then
+        task.defer(function()
+            if Character and Character:FindFirstChild("HumanoidRootPart") then
+                Character:PivotTo(DeathCFrame)
+            end
+        end)
+    end
+
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+    if Humanoid then
+        Humanoid.Died:Connect(function()
+            if Antispawn and Character and Character:FindFirstChild("HumanoidRootPart") then
+                DeathCFrame = Character.HumanoidRootPart.CFrame
+            else
+                DeathCFrame = nil
+            end
+        end)
+    end
+end
+
+if Player.Character then
+    onCharacterAdded(Player.Character)
+end
+Player.CharacterAdded:Connect(onCharacterAdded)
+
+TabA:Toggle({
+    Title = "Anti-spawn",
+    Desc = "O personagem automaticamente teleportará ao local onde você morreu.",
+    Callback = function(v)
+        Antispawn = v
+        if not v then
+            DeathCFrame = nil -- Limpa a CFrame salva ao desativar
+        end
+    end
+})
+
+TabA:Space()
+
+TabA:Paragraph({
         Title = "Noclip",
         Desc = "Permite atravessar paredes.",
     })
 
-    SectionPlayer:Toggle({
+    TabA:Toggle({
         Title = "Noclip",
         Callback = function(state)
             if state then
