@@ -1302,7 +1302,6 @@ trackTask(task.spawn(function()
     end
 end))
 
-
 -- UI AUTOFARM
 
 do
@@ -1370,7 +1369,6 @@ local SectionArma = TevezMods:Section({
     })
     SectionArma:Space()
 
-
     SectionArma:Paragraph({
         Title = "Spread",
         Desc = "Controla a dispersão dos tiros. Quanto maior, mais espalhado os tiros sairão da arma. Quanto menor, mais juntas as balas ficarão.",
@@ -1390,7 +1388,6 @@ local SectionArma = TevezMods:Section({
         end
     })
     SectionArma:Space()
-
 
     SectionArma:Paragraph({
         Title = "Range",
@@ -1412,7 +1409,6 @@ local SectionArma = TevezMods:Section({
     })
     SectionArma:Space()
 
-
     SectionArma:Paragraph({
         Title = "Aplicar mods",
         Desc = "Aplica as modificações na arma equipada.",
@@ -1425,11 +1421,9 @@ local SectionArma = TevezMods:Section({
                 Notify("Erro", "Equipe uma arma para modificar.")
                 return
             end
-
             if bulletsValue then ModifyGun("Bullets", bulletsValue) end
             if spreadValue then ModifyGun("Spread", spreadValue) end
             if rangeValue then ModifyGun("Range", rangeValue) end
-
             Notify("Mods", "Aplicações feitas.")
         end
     })
@@ -1461,6 +1455,23 @@ local CollectPos = bank.CollectPad.Position
 local Remotes = RS.Assets.Remotes
 local BuyShop = Remotes.BuyShop
 local Robbery = Remotes.Robbery
+
+-- Variáveis de controle de estado (Mantidas, mas controladas)
+local rodando = false
+local ultimaVenda = 0
+local DinheiroInicial = 0
+local DinheiroFarmado = 0
+
+-- UI Reference (assumindo que estas variáveis são definidas pela UI TevezApenas em algum lugar)
+local FarmStatus
+
+-- Mover a definição de UpdateStatus para o topo evita o erro "attempt to call a nil value"
+local function UpdateStatus(msg)
+    if FarmStatus and FarmStatus.SetDesc then -- Verificação de segurança
+        FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
+    end
+end
+
 
 local function ref()
 	char = plr.Character or plr.CharacterAdded:Wait()
@@ -1587,26 +1598,26 @@ local function vender()
 	UpdateStatus("Sucesso!")
 end
 
-local rodando = false
-
 local function farm()
     if rodando or not _G.AutoFarm then return end
     rodando = true
 
-    if aberto() then
-        UpdateStatus("Banco aberto! Iniciando...")
-    else
-        UpdateStatus("Esperando o banco abrir...")
-    end
-
     task.spawn(function()
-        repeat task.wait(0.2) until aberto() or not _G.AutoFarm
-        if not _G.AutoFarm then rodando = false return end
+        if not aberto() then
+            UpdateStatus("Esperando o banco abrir...")
+            -- Espera pelo status ABERTO, mas para se o autofarm for desativado
+            repeat task.wait(0.2) until aberto() or not _G.AutoFarm
+            if not _G.AutoFarm then rodando = false return end
+        end
 
-		UpdateStatus("Banco abriu! Indo comprar a C4...")
+        UpdateStatus("Banco abriu! Indo comprar a C4...")
 
 		c4Comprada = false
-		tentarComprarC4()
+		if not tentarComprarC4() then
+            UpdateStatus("Erro: Não foi possível comprar C4. Parando farm.")
+            rodando = false
+            return
+        end
 
 		local c4 = item("C4")
 		if c4 then char.Humanoid:EquipTool(c4) end
@@ -1616,8 +1627,6 @@ local function farm()
 
 		local function usarC4AteSumir()
 		    UpdateStatus("Plantando a C4...")
-		    local lastC4 = item("C4")
-		    if not lastC4 then return end
 		    while aberto() and _G.AutoFarm do
 		        if seguro() then continue end
 		        local c4Tool = item("C4")
@@ -1680,8 +1689,6 @@ plr.CharacterAdded:Connect(function()
 	end)
 end)
 
-local ultimaVenda = 0
-
 status:GetPropertyChangedSignal("Text"):Connect(function()
 	if not _G.AutoFarm then return end
 	if status.Text == "ABERTO" then
@@ -1716,7 +1723,7 @@ local Cash = TevezApenas:Tab({
     IconColor = Color3.fromHex("#03FF20")
 })
 
-local FarmStatus = Cash:Paragraph({
+FarmStatus = Cash:Paragraph({ -- Use a variável FarmStatus definida no escopo
     Title = "",
     Desc = "",
     Color = "Green",
@@ -1728,13 +1735,6 @@ local FarmStatus = Cash:Paragraph({
     Buttons = {}
 })
 
-local DinheiroInicial = 0
-local DinheiroFarmado = 0
-
-local function UpdateStatus(msg)
-    FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
-end
-
 FarmStatus:SetTitle("Status do Autofarm")
 UpdateStatus("Aguardando...")
 
@@ -1743,18 +1743,19 @@ Cash:Toggle({
     Desc = "Ativa ou desativa o autofarm.",
     Callback = function(v)
         _G.AutoFarm = v
+
         if v then
-            rodando = false
-            DinheiroInicial = (plr.leaderstats and plr.leaderstats.Dinheiro.Value) or 0
+            rodando = false -- Garante que o estado está limpo para iniciar
+            DinheiroInicial = plr.leaderstats.Dinheiro.Value
             DinheiroFarmado = 0
-            UpdateStatus("Autofarm iniciado.")
-            farm()
+            UpdateStatus("Autofarm iniciado")
+            farm() 
         else
-            UpdateStatus("Autofarm encerrado.")
+            UpdateStatus("Autofarm desativado")
+            rodando = false 
         end
     end
 })
-
 Cash:Space()
 
 Cash:Toggle({
