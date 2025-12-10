@@ -93,16 +93,23 @@ local Window = WindUI:CreateWindow({
     },
 })
 
+local SecretWord = "." 
+local ChatConnection = nil
+
 local function setupChatToggle()
-player.Chatted:Connect(function(msg)
-    if msg == "." then
-         Window:Toggle()
-      end
-   end)
+    if ChatConnection then
+        ChatConnection:Disconnect()
+        ChatConnection = nil
+    end
+
+    ChatConnection = player.Chatted:Connect(function(msg)
+        if msg == SecretWord then
+            Window:Toggle()
+        end
+    end)
 end
 
 setupChatToggle()
-
 
 Window:Tag({
     Title = "sanctuaryangels",
@@ -2271,14 +2278,28 @@ end
 
 -- Configurações
 
-local configuracoes = Outros:Tab({ Title = "Configurações", Icon = "geist:settings-gear", IconColor = Grey })
+local configuracoes = Window:Tab({ Title = "Configurações", Icon = "geist:settings-gear", IconColor = Grey })
 
-configuracoes:Input({
+Configuracoes:Input({
     Title = "Palavra secreta",
-    Desck = "Palavra ou frase que será digitada no chat para abrir / fechar a UI.",
-    Placeholder = "Ex: teste",
+    Desck = "Palavra ou frase que será digitada no chat para abrir / fechar a UI. Padrão: .",
+    Placeholder = "Ex: .",
     Callback = function(v)
- --funcao aqui
+        local has_space = string.find(v or "", "%s")
+        local is_empty = string.len(v or "") == 0
+        
+        if not is_empty and not has_space then
+            SecretWord = v
+            setupChatToggle()
+            Notify("Palavra Secreta", "Definida para: " .. v .. " para abrir a UI.")
+        else
+            -- Notificação de erro
+            Notify("Erro", "A palavra secreta não pode ser vazia nem conter espaços.")
+            
+            SecretWord = "."
+            setupChatToggle()
+            Notify("Palavra Secreta", "Resetada para: .")
+        end
     end
 })
 
