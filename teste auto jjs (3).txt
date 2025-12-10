@@ -624,156 +624,192 @@ do
     })
 
     local LocalPlayer = Players.LocalPlayer
-    local HitboxEnabled = false
-    local HitboxSize = Vector3.new(5,5,5)
-    local HitboxTransparency = 0.5
     local ESPEnabled = false
-    local ESPTable = {}
 
-    local function ResetHitbox(plr)
-        if plr == LocalPlayer then return end
-        local char = plr.Character
-        if not char then return end
+local ESPSettings = {
+    Box = true,
+    Name = true,
+    Studs = true,
+    Health = true,
+    WeaponN = true
+}
 
-        local HRP = char:FindFirstChild("HumanoidRootPart")
-        if not HRP then return end
+local ESP = {}
 
-        HRP.Size = Vector3.new(2,2,1)
-        HRP.Transparency = 0
-        HRP.CanCollide = true
-        HRP.Massless = false
+local function ESP_New(Player)
+    if Player == LocalPlayer then return end
 
-        local hl = HRP:FindFirstChild("a")
-        if hl then hl:Destroy() end
-    end
+    local E = {}
 
-    local function ApplyHitbox(plr)
-        if not HitboxEnabled then return end
-        if plr == LocalPlayer then return end
-        if plr.Team == LocalPlayer.Team then return end
-        if not plr.Character then return end
+    E.Box = Drawing.new("Square")
+    E.Box.Thickness = 2
+    E.Box.Filled = false
+    E.Box.Color = Color3.fromRGB(255, 255, 255)
+    E.Box.Visible = false
 
-        local HRP = plr.Character:FindFirstChild("HumanoidRootPart")
-        if not HRP then return end
+    E.Health = Drawing.new("Text")
+    E.Health.Size = 13
+    E.Health.Color = Color3.fromRGB(255, 255, 255)
+    E.Health.Center = true
+    E.Health.Outline = true
+    E.Health.Font = 3
+    E.Health.Visible = false
 
-        HRP.Size = HitboxSize
-        HRP.Transparency = HitboxTransparency
-        HRP.CanCollide = false
-        HRP.Massless = false
+    E.Name = Drawing.new("Text")
+    E.Name.Size = 13
+    E.Name.Color = Color3.fromRGB(255, 255, 255)
+    E.Name.Center = true
+    E.Name.Outline = true
+    E.Name.Font = 3
+    E.Name.Visible = false
 
-        local old = HRP:FindFirstChild("a")
-        if old then old:Destroy() end
+    E.WeaponN = Drawing.new("Text")
+    E.WeaponN.Size = 13
+    E.WeaponN.Color = Color3.fromRGB(255, 255, 255)
+    E.WeaponN.Center = true
+    E.WeaponN.Outline = true
+    E.WeaponN.Font = 3
+    E.WeaponN.Visible = false
 
-        local hl = Instance.new("Highlight")
-        hl.Name = "a"
-        hl.Parent = HRP
-        hl.FillColor = plr.TeamColor.Color
-        hl.OutlineColor = plr.TeamColor.Color
-        hl.FillTransparency = 1 - HitboxTransparency
-        hl.OutlineTransparency = HitboxTransparency
-    end
+    E.Studs = Drawing.new("Text")
+    E.Studs.Size = 13
+    E.Studs.Color = Color3.fromRGB(255, 255, 255)
+    E.Studs.Center = true
+    E.Studs.Outline = true
+    E.Studs.Font = 3
+    E.Studs.Visible = false
 
-    local function ClearESP(plr)
-        if ESPTable[plr] then
-            for _, d in pairs(ESPTable[plr]) do
-                if d and d.Remove then pcall(d.Remove, d) end
-            end
-            ESPTable[plr] = nil
-        end
-    end
-
-    local function ApplyESP(plr)
-        if not ESPEnabled then return end
-        if plr == LocalPlayer then return end
-        if plr.Team == LocalPlayer.Team then return end
-        if not plr.Character then return end
-
-        ClearESP(plr)
-
-        local HRP = plr.Character:FindFirstChild("HumanoidRootPart")
-        local Hum = plr.Character:FindFirstChildWhichIsA("Humanoid")
-        if not HRP or not Hum then return end
-
-        local nameDraw = Drawing.new("Text")
-        nameDraw.Size = 17
-        nameDraw.Center = true
-        nameDraw.Outline = true
-        nameDraw.Color = Color3.new(1,1,1)
-
-        local hpDraw = Drawing.new("Text")
-        hpDraw.Size = 16
-        hpDraw.Center = true
-        hpDraw.Outline = true
-        hpDraw.Color = Color3.fromRGB(0,255,0)
-
-        local toolDraw = Drawing.new("Text")
-        toolDraw.Size = 16
-        toolDraw.Center = true
-        toolDraw.Outline = true
-        toolDraw.Color = Color3.fromRGB(200,200,255)
-
-        ESPTable[plr] = {nameDraw, hpDraw, toolDraw}
-
-        task.spawn(function()
-            while ESPEnabled and plr.Character == HRP.Parent do
-                local pos, visible = workspace.CurrentCamera:WorldToViewportPoint(HRP.Position + Vector3.new(0,3,0))
-
-                if visible then
-                    nameDraw.Text = plr.Name
-                    nameDraw.Position = Vector2.new(pos.X, pos.Y - 20)
-                    nameDraw.Visible = true
-
-                    hpDraw.Text = tostring(math.floor(Hum.Health))
-                    hpDraw.Position = Vector2.new(pos.X, pos.Y)
-                    hpDraw.Visible = true
-
-                    local tool
-                    for _, v in ipairs(HRP.Parent:GetChildren()) do
-                        if v:IsA("Tool") then tool = v.Name break end
-                    end
-
-                    if tool then
-                        toolDraw.Text = tool
-                        toolDraw.Position = Vector2.new(pos.X, pos.Y + 20)
-                        toolDraw.Visible = true
-                    else
-                        toolDraw.Visible = false
-                    end
-                else
-                    nameDraw.Visible = false
-                    hpDraw.Visible = false
-                    toolDraw.Visible = false
-                end
-                task.wait()
-            end
-
-            ClearESP(plr)
-        end)
-    end
-
-    local function RefreshAll()
-        for _,plr in ipairs(Players:GetPlayers()) do
-            if HitboxEnabled then ApplyHitbox(plr) else ResetHitbox(plr) end
-            ClearESP(plr)
-            if ESPEnabled then ApplyESP(plr) end
-        end
-    end
-
-    Players.PlayerAdded:Connect(function(plr)
-        plr.CharacterAdded:Connect(function()
-            task.wait(1)
-            if HitboxEnabled then ApplyHitbox(plr) end
-            if ESPEnabled then ApplyESP(plr) end
-        end)
-    end)
-
-for _, plr in ipairs(Players:GetPlayers()) do
-    plr.CharacterAdded:Connect(function()
-        task.wait(1)
-        if HitboxEnabled then ApplyHitbox(plr) end
-        if ESPEnabled then ApplyESP(plr) end
-    end)
+    ESP[Player] = E
 end
+
+local function ESP_Remove(Player)
+    if ESP[Player] then
+        for _, v in pairs(ESP[Player]) do
+            pcall(function() v:Remove() end)
+        end
+        ESP[Player] = nil
+    end
+end
+
+-- criar para os atuais
+for _, plr in ipairs(Players:GetPlayers()) do
+    ESP_New(plr)
+end
+
+-- eventos
+Players.PlayerAdded:Connect(ESP_New)
+Players.PlayerRemoving:Connect(ESP_Remove)
+
+-- loop do ESP
+RunService.RenderStepped:Connect(function()
+    if not ESPEnabled then
+        for _, E in pairs(ESP) do
+            for _, v in pairs(E) do
+                v.Visible = false
+            end
+        end
+        return
+    end
+
+    for Player, E in pairs(ESP) do
+        local char = Player.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+        if not hum or hum.Health <= 0 or not hrp then
+            for _, v in pairs(E) do v.Visible = false end
+            continue
+        end
+
+        local cam = workspace.CurrentCamera
+        local cf, size = char:GetBoundingBox()
+        local min = cf.Position - size/2
+        local max = cf.Position + size/2
+
+        local corners = {
+            Vector3.new(min.X,min.Y,min.Z), Vector3.new(min.X,min.Y,max.Z),
+            Vector3.new(min.X,max.Y,min.Z), Vector3.new(min.X,max.Y,max.Z),
+
+            Vector3.new(max.X,min.Y,min.Z), Vector3.new(max.X,min.Y,max.Z),
+            Vector3.new(max.X,max.Y,min.Z), Vector3.new(max.X,max.Y,max.Z),
+        }
+
+        local screen = {}
+        local valid = true
+
+        for _, pt in ipairs(corners) do
+            local s, vis = cam:WorldToViewportPoint(pt)
+            if not vis then valid = false break end
+            table.insert(screen, Vector2.new(s.X, s.Y))
+        end
+
+        if not valid then
+            for _, v in pairs(E) do v.Visible = false end
+            continue
+        end
+
+        local minX, maxX = math.huge, -math.huge
+        local minY, maxY = math.huge, -math.huge
+
+        for _, s in ipairs(screen) do
+            minX = math.min(minX, s.X)
+            maxX = math.max(maxX, s.X)
+            minY = math.min(minY, s.Y)
+            maxY = math.max(maxY, s.Y)
+        end
+
+        -- box
+        if ESPSettings.Box then
+            E.Box.Position = Vector2.new(minX, minY)
+            E.Box.Size = Vector2.new(maxX - minX, maxY - minY)
+            E.Box.Visible = true
+        else
+            E.Box.Visible = false
+        end
+
+        -- nome
+        if ESPSettings.Name then
+            E.Name.Text = Player.Name
+            E.Name.Position = Vector2.new((minX + maxX)/2, minY - 16)
+            E.Name.Visible = true
+        else
+            E.Name.Visible = false
+        end
+
+        -- vida
+        if ESPSettings.Health then
+            E.Health.Text = "HP: "..math.floor(hum.Health)
+            E.Health.Position = Vector2.new((minX + maxX)/2, minY - 32)
+            E.Health.Visible = true
+        else
+            E.Health.Visible = false
+        end
+
+        -- studs
+        if ESPSettings.Studs and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+            E.Studs.Text = "["..math.floor(dist).."m]"
+            E.Studs.Position = Vector2.new((minX + maxX)/2, maxY + 5)
+            E.Studs.Visible = true
+        else
+            E.Studs.Visible = false
+        end
+
+        -- arma
+        if ESPSettings.WeaponN then
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool then
+                E.WeaponN.Text = tool.Name
+                E.WeaponN.Position = Vector2.new((minX + maxX)/2, maxY + 20)
+                E.WeaponN.Visible = true
+            else
+                E.WeaponN.Visible = false
+            end
+        else
+            E.WeaponN.Visible = false
+        end
+    end
+end)
 
    SectionHitbox:Paragraph({
         Title = "Modificar hitbox",
@@ -839,14 +875,53 @@ local SectionESP = TabB:Section({
     })
 
     SectionESP:Toggle({
-        Title = "ESP",
-        Callback = function(v)
-            ESPEnabled = v
-            RefreshAll()
-        end
-    })
-end
+    Title = "Ativar",
+    Callback = function(v)
+        ESPEnabled = v
+    end
+})
+SectionESP:Space()
 
+SectionESP:Paragraph({
+        Title = "Opções",
+        Desc = "Ative o que você deseja ver!",
+    })
+
+SectionESP:Toggle({
+    Title = "Box",
+    Callback = function(v)
+        ESPSettings.Box = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Nome",
+    Callback = function(v)
+        ESPSettings.Name = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Distância",
+    Callback = function(v)
+        ESPSettings.Studs = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Vida",
+    Callback = function(v)
+        ESPSettings.Health = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Arma",
+    Callback = function(v)
+        ESPSettings.WeaponN = v
+    end
+})
+end
 
 -- =========================
 -- Auto JJ's
