@@ -1446,9 +1446,6 @@ local cfg = ...
 local ModoSeguro       = (cfg and cfg.ModoSeguro) or false
 local RaioDeSeguranca  = (cfg and cfg.RaioDeSeguranca) or 50
 
-----------------------------------------------------------------
--- SERVICES
-----------------------------------------------------------------
 local PS = game:GetService("Players")
 local WS = game:GetService("Workspace")
 local RS = game:GetService("ReplicatedStorage")
@@ -1457,10 +1454,6 @@ local RunService = game:GetService("RunService")
 local plr = PS.LocalPlayer
 local char, root, bag
 
-----------------------------------------------------------------
--- REFERENCES
-----------------------------------------------------------------
-
 local bank = WS.Map.Robbery.Bank
 local status = bank.RobberyStatus.SurfaceGui.BankStatus
 local CollectPos = bank.CollectPad.Position
@@ -1468,7 +1461,6 @@ local CollectPos = bank.CollectPad.Position
 local Remotes = RS.Assets.Remotes
 local BuyShop = Remotes.BuyShop
 local Robbery = Remotes.Robbery
-
 
 local function ref()
 	char = plr.Character or plr.CharacterAdded:Wait()
@@ -1538,15 +1530,14 @@ local function seguro()
 		if p ~= plr and p.Character then
 			local hrp = p.Character:FindFirstChild("HumanoidRootPart")
 			if hrp and (hrp.Position - root.Position).Magnitude <= RaioDeSeguranca then
-				
+				UpdateStatus("MODO SEGURO: Há algum player por perto. Aguardando...")
 				tps()
-
 				repeat
 					task.wait(0.4)
 				until not _G.AutoFarm
 				or not hrp
 				or (hrp.Position - root.Position).Magnitude > RaioDeSeguranca
-
+				UpdateStatus("Retomando farm...")
 				return true
 			end
 		end
@@ -1561,12 +1552,10 @@ local BUY_POS = Vector3.new(-766, 19, -365)
 local function tentarComprarC4()
 	if c4Comprada then return true end
 	if item("C4") then c4Comprada = true return true end
-
+	UpdateStatus("Comprando C4...")
 	tp(BUY_POS)
 	task.wait(1)
-
 	BuyShop:FireServer("C4")
-
 	for i = 1, 40 do
 		if item("C4") then
 			c4Comprada = true
@@ -1574,28 +1563,28 @@ local function tentarComprarC4()
 		end
 		task.wait(0.1)
 	end
-
 	return false
 end
 
 local VENDER_POS = Vector3.new(-742,-7,-536)
 
 local function vender()
+	UpdateStatus("Entregando...")
 	if seguro() then return end
-
 	tp(VENDER_POS + Vector3.new(math.random(-3,3), math.random(-1,1), math.random(-3,3)))
 	task.wait(0.2)
-
 	while dinheiro() > 0 and _G.AutoFarm do
 		if seguro() then break end
 		Robbery:FireServer("Payment")
 		task.wait(0.1)
 	end
-
 	task.wait(0.5)
 	tp(CollectPos)
 	task.wait(0.1)
 	tps()
+	local saldoAtual = plr.leaderstats.Dinheiro.Value
+	DinheiroFarmado = saldoAtual - DinheiroInicial
+	UpdateStatus("Sucesso!")
 end
 
 local rodando = false
@@ -1604,10 +1593,14 @@ local function farm()
 	if rodando or not _G.AutoFarm then return end
 	rodando = true
 
+	UpdateStatus("Esperando o banco abrir...")
+
 	task.spawn(function()
 
 		repeat task.wait(0.2) until aberto() or not _G.AutoFarm
 		if not _G.AutoFarm then rodando = false return end
+
+		UpdateStatus("Banco abriu! Indo comprar a C4...")
 
 		c4Comprada = false
 		tentarComprarC4()
@@ -1616,31 +1609,27 @@ local function farm()
 		if c4 then char.Humanoid:EquipTool(c4) end
 
 		local prompt = bank.BankVault.C4.Handle:FindFirstChildOfClass("ProximityPrompt")
-local vaultPos = bank.BankVault.Vault.Front.Position
+		local vaultPos = bank.BankVault.Vault.Front.Position
 
--- Função precisa vir ANTES da chamada
-local function usarC4AteSumir()
-    local lastC4 = item("C4")
-    if not lastC4 then return end
+		local function usarC4AteSumir()
+		    UpdateStatus("Plantando a C4...")
+		    local lastC4 = item("C4")
+		    if not lastC4 then return end
+		    while aberto() and _G.AutoFarm do
+		        if seguro() then continue end
+		        local c4Tool = item("C4")
+		        if not c4Tool then
+		            break
+		        end
+		        fireproximityprompt(prompt)
+		        task.wait(0.15)
+		    end
+		end
 
-    while aberto() and _G.AutoFarm do
-        if seguro() then continue end
-        local c4Tool = item("C4")
+		tp(vaultPos)
+		task.wait(1)
 
-        -- Se sumiu → foi usada
-        if not c4Tool then
-            break
-        end
-
-        fireproximityprompt(prompt)
-        task.wait(0.15)
-    end
-end
-
-tp(vaultPos)
-task.wait(1)
-
-usarC4AteSumir()
+		usarC4AteSumir()
 		tps()
 		task.wait(11)
 
@@ -1652,15 +1641,14 @@ usarC4AteSumir()
 				task.wait(math.random(8,10))
 				vender()
 			else
+				UpdateStatus("Coletando dinheiro...")
 				tp(CollectPos)
 				task.wait(0.05)
 				spin()
-
 				if char.Humanoid.Health < 50 then
 					tps()
 					repeat task.wait(0.2) until char.Humanoid.Health >= 90 or not _G.AutoFarm
 				end
-
 				tps()
 				task.wait(0.005)
 			end
@@ -1670,18 +1658,17 @@ usarC4AteSumir()
 	end)
 end
 
-
 plr.CharacterAdded:Connect(function()
 	task.wait(0.3)
 	ref()
-
-	if _G.AutoFarm then farm() end
-
+	if _G.AutoFarm then 
+		UpdateStatus("Você morreu. Reiniciando farm")
+		farm() 
+	end
 	char:WaitForChild("Humanoid").Died:Connect(function()
 		rodando = false
 		ref()
 		task.wait(1)
-
 		if _G.AutoFarm then
 			tp(CollectPos)
 			tps()
@@ -1694,22 +1681,17 @@ local ultimaVenda = 0
 
 status:GetPropertyChangedSignal("Text"):Connect(function()
 	if not _G.AutoFarm then return end
-
 	if status.Text == "ABERTO" then
 		farm()
 		return
 	end
-
 	if status.Text == "FECHADO" then
 		local agora = tick()
 		if agora - ultimaVenda < 5 then return end
 		ultimaVenda = agora
-
 		task.spawn(function()
 			task.wait(3)
-
 			if not _G.AutoFarm then return end
-
 			local d = dinheiro()
 			if d > 0 and _G.AutoFarm then
 				vender()
@@ -1725,29 +1707,52 @@ end)
 
 farm()
 
--- UI AUTOFARM
+-- Autofarm UI
 
-do
-    local Cash = TevezApenas:Tab({
-        Title = "Autofarm",
-        Icon = "lucide:wallet",
-        IconColor = Color3.fromHex("#03FF20")
-    })
+local Cash = TevezApenas:Tab({
+    Title = "Autofarm",
+    Icon = "lucide:wallet",
+    IconColor = Color3.fromHex("#03FF20")
+})
+
+local FarmStatus = Cash:Paragraph({
+    Title = "",
+    Desc = "",
+    Color = "Green",
+    Image = "",
+    ImageSize = 30,
+    Thumbnail = "",
+    ThumbnailSize = 80,
+    Locked = false,
+    Buttons = {}
+})
+
+local DinheiroInicial = 0
+local DinheiroFarmado = 0
+
+local function UpdateStatus(msg)
+    FarmStatus:SetDesc("📢 Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
+end
+
+FarmStatus:SetTitle("Status do Autofarm")
+UpdateStatus("Aguardando...")
 
 Cash:Toggle({
     Title = "Autofarm",
     Desc = "Ativa ou desativa o autofarm.",
     Callback = function(v)
         _G.AutoFarm = v
-
         if v then
-            Notify("Autofarm", "Autofarm ativado.")
+            DinheiroInicial = (plr.leaderstats and plr.leaderstats.Dinheiro.Value) or 0
+            DinheiroFarmado = 0
+            UpdateStatus("Autofarm iniciado")
             farm()
         else
-            Notify("Autofarm", "Autofarm desativado.")
+            UpdateStatus("Autofarm desativado")
         end
     end
 })
+
 Cash:Space()
 
 Cash:Toggle({
@@ -1769,12 +1774,10 @@ Cash:Input({
             Notify("Erro", "Digite um número válido.")
             return
         end
-
         RaioDeSeguranca = n
         Notify("Raio de Segurança", "Novo valor: "..tostring(n))
     end
 })
-end
 
 end -- Section do Tevez
 end -- tevez_mapa
