@@ -129,7 +129,7 @@ do
     })
 
     AboutTab:Image({
-        Image = "https://i.pinimg.com/736x/6f/71/8d/6f718d8dab224534767176f4da2fdf0e.jpg",
+        Image = "https://cdn.discordapp.com/attachments/1421660082579443816/1448274350334672936/6b44c0cf-d656-4e76-9e00-a5db9a88c206.jpg?ex=693aaa18&is=69395898&hm=d24f012ab9312bd635f1eb89c86b605d5bb2c647b30ee2073de1778112be1306&",
         AspectRatio = "4:3",
         Radius = 9,
     })
@@ -145,10 +145,12 @@ do
     AboutTab:Space()
 
     AboutTab:Section({
-        Title = [[ 
-- Implementação do Auto JJ's
-- Diversas funções exclusivas
-- Melhoria na estética da UI
+        Title = [[
+- Script tornou-se universal! (Qualquer jogo)
+- Autofarm implementado. (1.3K money para iniciar)
+- Bug fixes: hitbox expander, ESP e notificações ao iniciar o script.
+- ESP refeito
+- UI mais compacta e elegante.
 
 Desenvolvido e mantido por @fp3, em LuaU. Isso é apenas um hobby.]],
         TextSize = 18,
@@ -1687,13 +1689,14 @@ local rodando = false
 local ultimaVenda = 0
 local DinheiroInicial = 0
 local DinheiroFarmado = 0
+local MIN_MONEY_REQUIRED = 1300 -- Define o valor mínimo
 
 -- UI Reference (assumindo que estas variáveis são definidas pela UI TevezApenas em algum lugar)
 local FarmStatus
 
 -- Mover a definição de UpdateStatus para o topo evita o erro "attempt to call a nil value"
 local function UpdateStatus(msg)
-    if FarmStatus and FarmStatus.SetDesc then -- Verificação de segurança
+    if FarmStatus and FarmStatus.SetDesc then 
         FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
     end
 end
@@ -1826,12 +1829,18 @@ end
 
 local function farm()
     if rodando or not _G.AutoFarm then return end
+    
+    if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
+        UpdateStatus("FALHA: Necessário R$ " .. MIN_MONEY_REQUIRED .. " para comprar C4.")
+        rodando = false
+        return
+    end
+
     rodando = true
 
     task.spawn(function()
         if not aberto() then
             UpdateStatus("Esperando o banco abrir...")
-            -- Espera pelo status ABERTO, mas para se o autofarm for desativado
             repeat task.wait(0.2) until aberto() or not _G.AutoFarm
             if not _G.AutoFarm then rodando = false return end
         end
@@ -1949,7 +1958,7 @@ local Cash = TevezApenas:Tab({
     IconColor = Color3.fromHex("#03FF20")
 })
 
-FarmStatus = Cash:Paragraph({ -- Use a variável FarmStatus definida no escopo
+FarmStatus = Cash:Paragraph({
     Title = "",
     Desc = "",
     Color = "Green",
@@ -1971,6 +1980,13 @@ Cash:Toggle({
         _G.AutoFarm = v
 
         if v then
+            if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
+                Notify("FALHA", "Necessário R$ " .. MIN_MONEY_REQUIRED .. " para iniciar o AutoFarm.")
+                Cash:Toggle({Title = "Autofarm"}):Set(false) 
+                _G.AutoFarm = false
+                return
+            end
+            
             rodando = false
             DinheiroInicial = plr.leaderstats.Dinheiro.Value
             DinheiroFarmado = 0
@@ -1998,17 +2014,16 @@ Cash:Input({
     Desck = "Se alguém estiver dentro desse raio, interromperá o autofarm até que não haja ninguém nesse mesmo raio.",
     Placeholder = "Ex: 60 (recomendado)",
     Callback = function(v)
-if v == "" then return end
+        if v == "" then return end
         local n = tonumber(v)
         if not n then
             Notify("Erro", "Digite um número válido.")
             return
         end
         RaioDeSeguranca = n
-        Notify("NOVO VALOR", ""..tostring(n))
+        Notify("Valor:", ""..tostring(n))
     end
 })
-
 end -- Section do Tevez
 end -- Tab do tevez
 
@@ -2050,7 +2065,7 @@ if Response and Response.guild then
         Title = tostring(Response.guild.name),
         Desc = "Servidor de exploits para Roblox",
         Image = "https://cdn.discordapp.com/icons/" .. Response.guild.id .. "/" .. Response.guild.icon .. ".png?size=1024",
-        Thumbnail = "https://i.pinimg.com/1200x/63/8c/5e/638c5e9084688a81fdf74200e85c655c.jpg",
+        Thumbnail = "https://cdn.discordapp.com/attachments/1421660082579443816/1448274350334672936/6b44c0cf-d656-4e76-9e00-a5db9a88c206.jpg?ex=693aaa18&is=69395898&hm=d24f012ab9312bd635f1eb89c86b605d5bb2c647b30ee2073de1778112be1306&",
         ImageSize = 80,
         Buttons = {
             {
@@ -2246,7 +2261,7 @@ avaliar:Button({
         Save()
 
         EnviarPayload(false, avaliarBox.Value, avaliarNota, anonimatoAval)
-        Notify("Obrigado!", "Avaliação enviada.")
+        Notify("Agradeço!", "Avaliação enviada.")
     end
 })
 end
