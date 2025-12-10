@@ -47,6 +47,7 @@ local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local LocalizationService = game:GetService("LocalizationService")
+local TextChatService = game:GetService("TextChatService")
 
 local Player = Players.LocalPlayer
 local player = Players.LocalPlayer
@@ -230,7 +231,7 @@ end
 
 do
     local TabA = ElementsSection:Tab({
-        Title = "Player",
+        Title = "Local",
         Icon = "lucide:ellipsis-vertical",
         IconColor = Blue,
     })
@@ -426,6 +427,12 @@ TabA:Toggle({
     end
 })
 
+TabA:Toggle({
+    Title = "Ativar chat",
+    Desc = "Permite você ver o histórico de mensagens do chat.",
+    Callback = function(v)
+TextChatService.ChatWindowConfiguration.Enabled = v
+})
 TabA:Space()
 
 TabA:Paragraph({
