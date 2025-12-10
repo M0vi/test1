@@ -426,12 +426,14 @@ TabA:Toggle({
         end
     end
 })
+TabA:Space()
 
 TabA:Toggle({
-    Title = "Ativar chat",
-    Desc = "Permite você ver o histórico de mensagens do chat.",
+    Title = "Habilitar chat",
+    Desc = "Permite você ver o histórico de mensagens no chat.",
     Callback = function(v)
-TextChatService.ChatWindowConfiguration.Enabled = v
+    TextChatService.ChatWindowConfiguration.Enabled = v
+    end
 })
 TabA:Space()
 
