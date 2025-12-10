@@ -234,6 +234,7 @@ do
         Title = "Speed",
         Placeholder = "Valor",
         Callback = function(v)
+if v == "" then return end
             local n = tonumber(v)
             speedValue = n
             if n then
@@ -541,6 +542,7 @@ end)
         Title = "Tamanho da hitbox",
         Placeholder = "Ex: 10",
         Callback = function(v)
+if v == "" then return end
             local n = tonumber(v)
             if not n then return end
 
@@ -974,9 +976,6 @@ local JJs = Auto:Section({
                             Char:Jump()
                         end
 
-                        ---------------------------------------------------------------------
-                        -- INTERVALO
-                        ---------------------------------------------------------------------
                         if finishInTimeEnabled and forcedDelay then
                             task.wait(forcedDelay)
                             continue
@@ -1006,6 +1005,7 @@ local JJs = Auto:Section({
         Title = "Início",
         Placeholder = "Ex: 1",
         Callback = function(v)
+if v == "" then return end
             startValue = tonumber(v) or 1
         end
     })
@@ -1015,6 +1015,7 @@ JJs:Space()
         Title = "Fim",
         Placeholder = "Ex: 100",
         Callback = function(v)
+if v == "" then return end
             endValue = tonumber(v) or 100
         end
     })
@@ -1050,6 +1051,7 @@ JJs:Toggle({
         Title = "Tempo (segundos)",
         Placeholder = "Ex: 100",
         Callback = function(v)
+if v == "" then return end
             finishTotalTime = tonumber(v) or 60
         end
     })
@@ -1083,6 +1085,7 @@ local intervalos = Auto:Section({
         Title = "Intervalo fixo (segundos)",
         Placeholder = "Ex: 1.5",
         Callback = function(v)
+if v == "" then return end
             delayValue = tonumber(v) or 1.5
         end
     })
@@ -1100,6 +1103,7 @@ intervalos:Space()
         Title = "Mínimo",
         Placeholder = "Ex: 1",
         Callback = function(v)
+if v == "" then return end
             randomMin = tonumber(v) or 1
         end
     })
@@ -1108,6 +1112,7 @@ intervalos:Space()
         Title = "Máximo",
         Placeholder = "Ex: 3",
         Callback = function(v)
+if v == "" then return end
             randomMax = tonumber(v) or 3
         end
     })
@@ -1358,6 +1363,7 @@ local SectionArma = TevezMods:Section({
         Title = "Bullets",
         Placeholder = "Valor",
         Callback = function(v)
+if v == "" then return end
             local n = tonumber(v)
             bulletsValue = n
             if n then
@@ -1379,6 +1385,7 @@ local SectionArma = TevezMods:Section({
         Placeholder = "Valor",
         Callback = function(v)
             local n = tonumber(v)
+if v == "" then return end
             spreadValue = n
             if n then
                 Notify("Spread", "Valor: "..tostring(n))
@@ -1399,6 +1406,7 @@ local SectionArma = TevezMods:Section({
         Placeholder = "Valor",
         Callback = function(v)
             local n = tonumber(v)
+if v == "" then return end
             rangeValue = n
             if n then
                 Notify("Range", "Valor: "..tostring(n))
@@ -1438,7 +1446,7 @@ _G.AutoFarm = false
 
 local cfg = ...
 local ModoSeguro       = (cfg and cfg.ModoSeguro) or false
-local RaioDeSeguranca  = (cfg and cfg.RaioDeSeguranca) or 50
+local RaioDeSeguranca  = (cfg and cfg.RaioDeSeguranca) or 60
 
 local PS = game:GetService("Players")
 local WS = game:GetService("Workspace")
