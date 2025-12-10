@@ -1141,8 +1141,8 @@ do
         Desc = "Exclusivos do jogo",
         Icon = "lucide:bell",
         IconColor = Yellow
-    })
-
+})
+end
 
 -- KILL AURA
 
