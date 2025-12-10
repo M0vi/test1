@@ -1307,7 +1307,7 @@ end))
 -- UI AUTOFARM
 
 do
-    local Mods = ElementsSection:Tab({
+    local Mods = SomenteTevez:Tab({
         Title = "Mods",
         Icon = "lucide:keyboard",
         IconColor = Red
@@ -1442,7 +1442,7 @@ end
 -- =========================
 
 do
-    local Cash = ElementsSection:Tab({
+    local Cash = SomenteTevez:Tab({
         Title = "Autofarm",
         Icon = "lucide:keyboard",
         IconColor = Red
