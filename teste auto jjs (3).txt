@@ -166,12 +166,14 @@ local ElementsSection = Window:Section({
     Title = "Scripts",
 })
 
+if TEVEZ_MAPA then
     local TevezApenas = Window:Section({
     Title = "[EB] Tevez",
     Desc = "Exclusivos do jogo",
     Icon = "lucide:gamepad-2",
     IconColor = Color3.fromHex("#1C3811")
 })
+end
 
 local Outros = Window:Section({
     Title = "Outros",
@@ -1130,26 +1132,23 @@ local JJs = Auto:Section({
     })
     JJs:Space()
 
-local grupamento2 = JJs:Group()
-    grupamento2:Input({
-        Title = "Início",
+    JJs:Input({
+        Title = "Inicial",
         Placeholder = "Ex: 1",
         Callback = function(v)
 if v == "" then return end
             startValue = tonumber(v) or 1
         end
     })
-grupamento2:Space()
 
-    grupamento2:Input({
-        Title = "Fim",
+    JJs:Input({
+        Title = "Final",
         Placeholder = "Ex: 100",
         Callback = function(v)
 if v == "" then return end
             endValue = tonumber(v) or 100
         end
     })
-JJs:Space()
 
 JJs:Toggle({
         Title = "Pular",
@@ -1158,7 +1157,6 @@ JJs:Toggle({
             jumpEnabled = v
         end
     })
-JJs:Space()
 
 JJs:Toggle({
         Title = "Espaçamento",
@@ -1229,27 +1227,23 @@ intervalos:Space()
         end
     })
 
-local grupamento3 = intervalos:Group()
-
     intervalos:Input({
-        Title = "Mínimo",
+        Title = "Valor mínimo",
         Placeholder = "Ex: 1",
         Callback = function(v)
 if v == "" then return end
             randomMin = tonumber(v) or 1
         end
     })
-grupamento3:Space()
 
-    grupamento3:Input({
-        Title = "Máximo",
+    intervalos:Input({
+        Title = "Valor máximo",
         Placeholder = "Ex: 3",
         Callback = function(v)
 if v == "" then return end
             randomMax = tonumber(v) or 3
         end
     })
-grupamento3:Space()
 
 -- Section Extras
 
