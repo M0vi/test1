@@ -1753,7 +1753,7 @@ Cash:Toggle({
         _G.AutoFarm = v
 
         if v then
-            rodando = false -- Garante que o estado está limpo para iniciar
+            rodando = false
             DinheiroInicial = plr.leaderstats.Dinheiro.Value
             DinheiroFarmado = 0
             UpdateStatus("Autofarm iniciado")
@@ -1780,13 +1780,14 @@ Cash:Input({
     Desck = "Se alguém estiver dentro desse raio, interromperá o autofarm até que não haja ninguém nesse mesmo raio.",
     Placeholder = "Ex: 60 (recomendado)",
     Callback = function(v)
+if v == "" then return end
         local n = tonumber(v)
         if not n then
             Notify("Erro", "Digite um número válido.")
             return
         end
         RaioDeSeguranca = n
-        Notify("Raio de Segurança", "Novo valor: "..tostring(n))
+        Notify("NOVO VALOR", ""..tostring(n))
     end
 })
 
