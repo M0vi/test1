@@ -16,7 +16,8 @@ setreadonly(n, true)
 
 local function bypass(h)
     local ok, mt = pcall(getrawmetatable, h)
-    if not ok or not mt then return end
+    
+if not ok or not mt then return end
 
     setreadonly(mt, false)
 
@@ -29,6 +30,7 @@ local function bypass(h)
         return old(s, k)
     end)
 
+ 
     setreadonly(mt, true)
 end
 
@@ -63,7 +65,8 @@ do
     if ok then
         WindUI = result
     else
-        WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+     
+    WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
     end
 end
 
@@ -82,7 +85,8 @@ local Window = WindUI:CreateWindow({
         Title = "Abrir o menu",
         CornerRadius = UDim.new(1,0),
         StrokeThickness = 2,
-        Enabled = false,
+        Enabled 
+= false,
         Draggable = true
     },
     Topbar = {
@@ -101,7 +105,8 @@ local function setupChatToggle()
     end
 
     ChatConnection = player.Chatted:Connect(function(msg)
-        if msg == SecretWord then
+        if msg == SecretWord 
+ then
             Window:Toggle()
         end
     end)
@@ -133,7 +138,8 @@ local Red = Color3.fromHex("#EF4F1D")
 -- =========================
 do
     local AboutTab = Window:Tab({
-        Title = "Atualizações",
+        Title = 
+ "Atualizações",
         Desc = "",
         Icon = "lucide:bell",
         IconColor = Yellow
@@ -149,7 +155,8 @@ do
 
     AboutTab:Section({
         Title = "Changelogs:",
-        TextSize = 30,
+      
+   TextSize = 30,
         FontWeight = Enum.FontWeight.SemiBold,
     })
 
@@ -157,13 +164,15 @@ do
 
     AboutTab:Section({
         Title = [[
-- Script tornou-se universal! (Qualquer jogo)
+- Script tornou-se universal!
+ (Qualquer jogo)
 - Autofarm implementado. (1.3K money para iniciar)
 - Bug fixes: hitbox expander, ESP e notificações ao iniciar o script.
-- ESP refeito
+ - ESP refeito
 - UI mais compacta e elegante.
 
-Desenvolvido e mantido por @fp3, em LuaU. Isso é apenas um hobby.]],
+Desenvolvido e mantido por @fp3, em LuaU.
+ Isso é apenas um hobby.]],
         TextSize = 18,
         TextTransparency = .35,
         FontWeight = Enum.FontWeight.Medium,
@@ -186,7 +195,8 @@ local function Notify(title, content, dur)
     pcall(function()
         WindUI:Notify({
             Title = tostring(title or ""),
-            Content = tostring(content or ""),
+     
+        Content = tostring(content or ""),
             Duration = dur or 3,
             Icon = "bird"
         })
@@ -206,7 +216,8 @@ if Player.Character then
 end
 Player.CharacterAdded:Connect(function(c)
     local h = c:WaitForChild("Humanoid")
-    bypass(h)
+  
+   bypass(h)
 end)
 
 -- Noclip
@@ -228,6 +239,7 @@ end
 
 do
     local TabA = ElementsSection:Tab({
+ 
         Title = "Local",
         Icon = "lucide:ellipsis-vertical",
         IconColor = Blue,
@@ -237,18 +249,21 @@ do
 
     TabA:Paragraph({
         Title = "Speed",
-        Desc = "Modifica a velocidade do personagem. Burla a maioria dos anticheats.",
+        Desc = "Modifica a velocidade do personagem.
+ Burla a maioria dos anticheats.",
     })
 
     TabA:Input({
         Title = "Speed",
         Placeholder = "Valor",
+        Flag = "Player_SpeedValueInput", -- Flag adicionada
         Callback = function(v)
 if v == "" then return end
             local n = tonumber(v)
             speedValue = n
             if n then
-                Notify("Speed", "Valor: "..tostring(n))
+         
+        Notify("Speed", "Valor: "..tostring(n))
             else
                 Notify("Speed", "Inválido")
             end
@@ -261,14 +276,16 @@ local grupamento1 = TabA:Group()
     grupamento1:Button({
         Title = "Aplicar velocidade",
         Callback = function()
-            if not speedValue then
+      
+       if not speedValue then
                 Notify("Speed", "Informe um valor válido.")
                 return
             end
 
             local h = Player.Character and Player.Character:FindFirstChild("Humanoid")
             if h then
-                h.WalkSpeed = speedValue
+            
+     h.WalkSpeed = speedValue
                 Notify("Speed", "Alterada para "..tostring(speedValue))
             else
                 Notify("Speed", "Personagem não encontrado.")
@@ -279,6 +296,7 @@ local grupamento1 = TabA:Group()
 
     grupamento1:Button({
         Title = "Resetar speed",
+ 
         Callback = function()
             local h = Player.Character and Player.Character:FindFirstChild("Humanoid")
             if h then
@@ -286,7 +304,8 @@ local grupamento1 = TabA:Group()
                 Notify("Speed", "Restaurada")
             end
         end
-    })
+   
+  })
 TabA:Space()
 
 local Antispawn = false
@@ -324,13 +343,15 @@ local function onCharacterAdded(character)
 end
 
 player.CharacterAdded:Connect(onCharacterAdded)
-if player.Character then
+if 
+ player.Character then
 	onCharacterAdded(player.Character)
 end
 
 TabA:Toggle({
     Title = "Anti-spawn",
     Desc = "O personagem automaticamente teleportará ao local onde você morreu.",
+    Flag = "Player_AntiSpawn", -- Flag adicionada
     Callback = function(v)
         Antispawn = v
         if not v then
@@ -343,7 +364,9 @@ TabA:Space()
 TabA:Toggle({
     Title = "Habilitar chat",
     Desc = "Permite você ver o histórico de mensagens no chat.",
-    Callback = function(v)
+    Flag = "Player_ChatWindow", -- Flag adicionada
+    Callback 
+ = function(v)
     TextChatService.ChatWindowConfiguration.Enabled = v
     end
 })
@@ -356,21 +379,25 @@ TabA:Paragraph({
 
     TabA:Toggle({
         Title = "Noclip",
+        Flag = "Player_Noclip", -- Flag adicionada
         Callback = function(state)
             if state then
                 CanCollide = false
-                if NoClipConn then
+       
+          if NoClipConn then
                     pcall(function() NoClipConn:Disconnect() end)
                 end
                 NoClipConn = RunService.Stepped:Connect(NoClip)
                 Notify("Noclip", "[NOCLIP] Ativado")
             else
-                CanCollide = true
+   
+              CanCollide = true
                 if NoClipConn then
                     pcall(function() NoClipConn:Disconnect() end)
                     NoClipConn = nil
                 end
-                Notify("Noclip", "[NOCLIP] Desativado")
+       
+          Notify("Noclip", "[NOCLIP] Desativado")
             end
         end
     })
@@ -387,7 +414,8 @@ do
     })
 
     local SectionHitbox = TabB:Section({
-        Title = "Hitbox expander"
+        Title = "Hitbox 
+ expander"
     })
 
     local LocalPlayer = Players.LocalPlayer
@@ -412,6 +440,7 @@ local function ESP_New(Player)
     E.Box.Thickness = 2
     E.Box.Filled = false
     E.Box.Color = Color3.fromRGB(255, 255, 255)
+ 
     E.Box.Visible = false
 
     E.Health = Drawing.new("Text")
@@ -431,6 +460,7 @@ local function ESP_New(Player)
     E.Name.Visible = false
 
     E.WeaponN = Drawing.new("Text")
+ 
     E.WeaponN.Size = 13
     E.WeaponN.Color = Color3.fromRGB(255, 255, 255)
     E.WeaponN.Center = true
@@ -451,7 +481,8 @@ end
 
 local function ESP_Remove(Player)
     if ESP[Player] then
-        for _, v in pairs(ESP[Player]) do
+     
+    for _, v in pairs(ESP[Player]) do
             pcall(function() v:Remove() end)
         end
         ESP[Player] = nil
@@ -472,7 +503,8 @@ RunService.RenderStepped:Connect(function()
     if not ESPEnabled then
         for _, E in pairs(ESP) do
             for _, v in pairs(E) do
-                v.Visible = false
+  
+               v.Visible = false
             end
         end
         return
@@ -483,7 +515,8 @@ RunService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-        if not hum or hum.Health <= 0 or not hrp then
+      
+   if not hum or hum.Health <= 0 or not hrp then
             for _, v in pairs(E) do v.Visible = false end
             continue
         end
@@ -491,7 +524,8 @@ RunService.RenderStepped:Connect(function()
         local cam = workspace.CurrentCamera
         local cf, size = char:GetBoundingBox()
         local min = cf.Position - size/2
-        local max = cf.Position + size/2
+        local max = 
+ cf.Position + size/2
 
         local corners = {
             Vector3.new(min.X,min.Y,min.Z), Vector3.new(min.X,min.Y,max.Z),
@@ -504,7 +538,8 @@ RunService.RenderStepped:Connect(function()
         local screen = {}
         local valid = true
 
-        for _, pt in ipairs(corners) do
+     
+    for _, pt in ipairs(corners) do
             local s, vis = cam:WorldToViewportPoint(pt)
             if not vis then valid = false break end
             table.insert(screen, Vector2.new(s.X, s.Y))
@@ -512,7 +547,8 @@ RunService.RenderStepped:Connect(function()
 
         if not valid then
             for _, v in pairs(E) do v.Visible = false end
-            continue
+  
+           continue
         end
 
         local minX, maxX = math.huge, -math.huge
@@ -521,7 +557,8 @@ RunService.RenderStepped:Connect(function()
         for _, s in ipairs(screen) do
             minX = math.min(minX, s.X)
             maxX = math.max(maxX, s.X)
-            minY = math.min(minY, s.Y)
+            minY 
+= math.min(minY, s.Y)
             maxY = math.max(maxY, s.Y)
         end
 
@@ -530,7 +567,8 @@ RunService.RenderStepped:Connect(function()
             E.Box.Position = Vector2.new(minX, minY)
             E.Box.Size = Vector2.new(maxX - minX, maxY - minY)
             E.Box.Visible = true
-        else
+        
+ else
             E.Box.Visible = false
         end
 
@@ -540,7 +578,8 @@ RunService.RenderStepped:Connect(function()
             E.Name.Position = Vector2.new((minX + maxX)/2, minY - 16)
             E.Name.Visible = true
         else
-            E.Name.Visible = false
+    
+         E.Name.Visible = false
         end
 
         -- vida
@@ -549,7 +588,8 @@ RunService.RenderStepped:Connect(function()
             E.Health.Position = Vector2.new((minX + maxX)/2, minY - 32)
             E.Health.Visible = true
         else
-            E.Health.Visible = false
+       
+         E.Health.Visible = false
         end
 
         -- studs
@@ -557,7 +597,8 @@ RunService.RenderStepped:Connect(function()
             local dist = (LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
             E.Studs.Text = "["..math.floor(dist).."m]"
             E.Studs.Position = Vector2.new((minX + maxX)/2, maxY + 5)
-            E.Studs.Visible = true
+            
+ E.Studs.Visible = true
         else
             E.Studs.Visible = false
         end
@@ -567,13 +608,15 @@ RunService.RenderStepped:Connect(function()
             local tool = char:FindFirstChildOfClass("Tool")
             if tool then
                 E.WeaponN.Text = tool.Name
-                E.WeaponN.Position = Vector2.new((minX + maxX)/2, maxY + 20)
+  
+               E.WeaponN.Position = Vector2.new((minX + maxX)/2, maxY + 20)
                 E.WeaponN.Visible = true
             else
                 E.WeaponN.Visible = false
             end
         else
-            E.WeaponN.Visible = false
+           
+  E.WeaponN.Visible = false
         end
     end
 end)
@@ -599,7 +642,8 @@ local function ResetHitbox(plr)
     HRP.CanCollide = true
     HRP.Massless = false
 
-    local hl = HRP:FindFirstChild("a")
+    
+ local hl = HRP:FindFirstChild("a")
     if hl then hl:Destroy() end
 end
 
@@ -618,6 +662,7 @@ local function ApplyHitbox(plr)
     HRP.Massless = false
 
     local old = HRP:FindFirstChild("a")
+ 
     if old then old:Destroy() end 
 
     local hl = Instance.new("Highlight")
@@ -637,7 +682,8 @@ end
 
 local function HandleCharacter(character)
     local plr = Players:GetPlayerFromCharacter(character)
-    if not plr then return end
+    if not plr then 
+ return end
     
     if HitboxEnabled then
         ApplyHitbox(plr)
@@ -659,7 +705,8 @@ end)
 for _, plr in ipairs(Players:GetPlayers()) do
     if plr.Character then
         HandleCharacter(plr.Character)
-    end
+   
+  end
     plr.CharacterAdded:Connect(function(character)
         task.wait(1)
         HandleCharacter(character)
@@ -674,6 +721,7 @@ SectionHitbox:Paragraph({
 
 SectionHitbox:Toggle({
     Title = "Hitbox",
+    Flag = "Hitbox_Toggle", -- Flag adicionada
     Callback = function(v)
         HitboxEnabled = v
         RefreshAll()
@@ -682,8 +730,10 @@ SectionHitbox:Toggle({
 
 SectionHitbox:Input({
     Title = "Tamanho da hitbox",
-    Desc = "Valor usado para mudar a hitbox dos inimigos.",
+    Desc = "Valor usado para mudar a hitbox 
+ dos inimigos.",
     Placeholder = "Ex: 10",
+    Flag = "Hitbox_Tamanho", -- Flag adicionada
     Callback = function(v)
         if v == "" then return end
         local n = tonumber(v)
@@ -698,12 +748,14 @@ SectionHitbox:Space()
 
 SectionHitbox:Paragraph({
     Title = "Transparência",
-    Desc = "Determina o quão visível a hitbox ficará. 0 = visível; 1 = invisível.",
+    Desc = "Determina o quão visível a hitbox ficará.
+ 0 = visível; 1 = invisível.",
 })
 
 SectionHitbox:Slider({
     Title = "Transparência",
     Step = 0.02,
+    Flag = "Hitbox_Transparencia", -- Flag adicionada
     Value = {
         Min = 0,
         Max = 1,
@@ -718,7 +770,8 @@ SectionHitbox:Slider({
 
 local SectionESP = TabB:Section({
         Title = "ESP"
-    })
+  
+   })
 
     SectionESP:Paragraph({
         Title = "ESP",
@@ -727,6 +780,7 @@ local SectionESP = TabB:Section({
 
     SectionESP:Toggle({
     Title = "Ativar",
+    Flag = "ESP_Ativar", -- Flag adicionada
     Callback = function(v)
         ESPEnabled = v
     end
@@ -740,6 +794,8 @@ SectionESP:Paragraph({
 
 SectionESP:Toggle({
     Title = "Box",
+ 
+    Flag = "ESP_Box", -- Flag adicionada
     Callback = function(v)
         ESPSettings.Box = v
     end
@@ -747,6 +803,7 @@ SectionESP:Toggle({
 
 SectionESP:Toggle({
     Title = "Nome",
+    Flag = "ESP_Nome", -- Flag adicionada
     Callback = function(v)
         ESPSettings.Name = v
     end
@@ -754,6 +811,7 @@ SectionESP:Toggle({
 
 SectionESP:Toggle({
     Title = "Distância",
+    Flag = "ESP_Distancia", -- Flag adicionada
     Callback = function(v)
         ESPSettings.Studs = v
     end
@@ -761,13 +819,16 @@ SectionESP:Toggle({
 
 SectionESP:Toggle({
     Title = "Vida",
+    Flag = "ESP_Vida", -- Flag adicionada
     Callback = function(v)
         ESPSettings.Health = v
     end
 })
 
 SectionESP:Toggle({
-    Title = "Item",
+   
+  Title = "Item",
+    Flag = "ESP_Item", -- Flag adicionada
     Callback = function(v)
         ESPSettings.WeaponN = v
     end
@@ -799,7 +860,8 @@ local Methods = {
         local ChatUI = PlayerGui:FindFirstChild("Chat")
         
         if CurrentChannel then
-            CurrentChannel:SendAsync(Message)
+       
+      CurrentChannel:SendAsync(Message)
         elseif ChatUI then
             local ChatFrame = WC(ChatUI, "Frame", 95)
             local CBPF = WC(ChatFrame, "ChatBarParentFrame", 95)
@@ -807,7 +869,8 @@ local Methods = {
             local Frame = WC(CBPF, "Frame", 95)
             local BF = WC(Frame, "BoxFrame", 95)
 
-            local ChatFM = WC(BF, "Frame", 95)
+            local ChatFM = WC(BF, "Frame", 
+ 95)
             local ChatBar = FFC(ChatFM, "ChatBar", 95)
 
             ChatBar:CaptureFocus()
@@ -819,7 +882,8 @@ local Methods = {
     [Enum.ChatVersion.TextChatService] = function(Message)
         if CurrentChannel then
             CurrentChannel:SendAsync(Message)
-        end
+     
+    end
     end,
 }
 
@@ -842,7 +906,8 @@ if InputBar then
 end
 
 
--- character (usado no jump)
+-- character (usado no 
+ jump)
 local Character = {}
 
 Character.__index = Character
@@ -899,7 +964,8 @@ local accentMap = {
     ["á"]="Á",["à"]="À",["ã"]="Ã",["â"]="Â",
     ["é"]="É",["ê"]="Ê",
     ["í"]="Í",
-    ["ó"]="Ó",["ô"]="Ô",["õ"]="Õ",
+   
+  ["ó"]="Ó",["ô"]="Ô",["õ"]="Õ",
     ["ú"]="Ú",
     ["ç"]="Ç"
 }
@@ -928,6 +994,7 @@ local tens = {
 local hundreds = {
     [1]="cento",[2]="duzentos",[3]="trezentos",[4]="quatrocentos",
     [5]="quinhentos",[6]="seiscentos",[7]="setecentos",[8]="oitocentos",
+ 
     [9]="novecentos"
 }
 
@@ -950,7 +1017,8 @@ local function threeDigitToWords(n)
     if h > 0 then table.insert(parts, hundreds[h]) end
 
     if rest < 20 then
-        if rest > 0 then table.insert(parts, units[rest]) end
+        if rest > 0 then table.insert(parts, units[rest]) 
+ end
     else
         table.insert(parts, tens[math.floor(rest/10)])
         local u = rest % 10
@@ -967,7 +1035,8 @@ local function numberToWords(num)
 
     local groups = {}
     while num > 0 do
-        table.insert(groups, num % 1000)
+  
+       table.insert(groups, num % 1000)
         num = math.floor(num / 1000)
     end
 
@@ -977,11 +1046,13 @@ local function numberToWords(num)
         if val ~= 0 then
             local text = threeDigitToWords(val)
             if i > 1 then
-                local scale = (val==1) and scales_singular[i-1] or scales_plural[i-1]
+      
+           local scale = (val==1) and scales_singular[i-1] or scales_plural[i-1]
                 if i == 2 and val == 1 then
                     text = "mil"
                 else
-                    text = text.." "..scale
+                    text 
+ = text.." "..scale
                 end
             end
             table.insert(parts, text)
@@ -1000,7 +1071,8 @@ local startValue = 1
 local endValue   = 100
 
 local delayValue = 1.5              
-local randomDelayEnabled = false    
+local randomDelayEnabled = 
+ false    
 local randomMin = 1                 
 local randomMax = 3                
 
@@ -1018,7 +1090,8 @@ local customSuffix = ""
 
 do
     local Auto = ElementsSection:Tab({
-        Title = "Auto JJ's",
+  
+       Title = "Auto JJ's",
         Icon = "lucide:keyboard",
         IconColor = Red
     })
@@ -1029,7 +1102,8 @@ do
         Color = "Green",
         Image = "",
         ImageSize = 0,
-        Thumbnail = "",
+        Thumbnail 
+ = "",
         ThumbnailSize = 0,
         Locked = false,
     })
@@ -1040,7 +1114,8 @@ do
             string.format(
                 "Restando: %d JJ's\nTempo estimado: %.1f segundos",
                 remaining,
-                math.max(secondsLeft, 0)
+   
+              math.max(secondsLeft, 0)
             )
         )
     end
@@ -1053,87 +1128,104 @@ local JJs = Auto:Section({
 
     JJs:Toggle({
         Title = "Auto JJ's",
+        Flag = "JJs_AutoToggle", -- Flag adicionada
         Callback = function(v)
             running = v
 
-            if running then
+   
+          if running then
                 task.spawn(function()
 
                     local i = startValue
                     local limit = endValue
                     local step = 1
 
-                    if reverseEnabled then
+    
+                 if reverseEnabled then
                         i = endValue
                         limit = startValue
                         step = -1
-                    end
+    
+                 end
 
                     local totalJJ = math.abs(endValue - startValue) + 1
 
                     local forcedDelay = nil
                     local estimatedFinishTime = 0
 
-                    if finishInTimeEnabled then
+           
+          if finishInTimeEnabled then
                         forcedDelay = finishTotalTime / totalJJ
                         estimatedFinishTime = finishTotalTime
                     end
 
-                    local executed = 0
+               
+      local executed = 0
                     local countdown = estimatedFinishTime
 
                     for num = i, limit, step do
                         if not running then break end
 
-                        executed += 1
+              
+           executed += 1
                         local remaining = totalJJ - executed
 
                         if finishInTimeEnabled then
-                            countdown = finishTotalTime - (executed * forcedDelay)
+                            countdown = finishTotalTime - (executed 
+ * forcedDelay)
                         else
                             local avgDelay = randomDelayEnabled
                                 and ((randomMin + randomMax) / 2)
-                                or delayValue
+       
+                          or delayValue
 
                             countdown = remaining * avgDelay
                         end
 
-                        updateETA(remaining, countdown)
+                  
+       updateETA(remaining, countdown)
 
                         -- MENSAGEM
 
                         local word = numberToWords(num)
                         local finalSuffix = (customSuffix ~= "" and customSuffix) or suffix
-                        local msg = spacingEnabled and (word .. " " .. finalSuffix) or (word .. finalSuffix)
+        
+                 local msg = spacingEnabled and (word .. " " .. finalSuffix) or (word .. finalSuffix)
 
                         RemoteChat:Send(msg)
 
                         -- PULAR
-                        if jumpEnabled then
+                     
+    if jumpEnabled then
                             Char:Jump()
                         end
 
                         if finishInTimeEnabled and forcedDelay then
-                            task.wait(forcedDelay)
+               
+              task.wait(forcedDelay)
                             continue
                         end
 
                         if randomDelayEnabled then
-                            local steps = math.floor((randomMax - randomMin) / 0.1)
+         
+                   local steps = math.floor((randomMax - randomMin) / 0.1)
                             if steps < 0 then steps = 0 end
 
                             local randStep = math.random(0, steps)
-                            local delay = randomMin + (randStep * 0.1)
+      
+                       local delay = randomMin + (randStep * 0.1)
 
                             task.wait(delay)
                         else
-                            task.wait(delayValue)
+                   
+          task.wait(delayValue)
                         end
                     end
 
                     updateETA(0, 0)
                 end)
-            end
+          
+   end
         end
     })
     JJs:Space()
@@ -1141,6 +1233,7 @@ local JJs = Auto:Section({
     JJs:Input({
         Title = "Inicial",
         Placeholder = "Ex: 1",
+        Flag = "JJs_StartValue", -- Flag adicionada
         Callback = function(v)
 if v == "" then return end
             startValue = tonumber(v) or 1
@@ -1148,8 +1241,10 @@ if v == "" then return end
     })
 
     JJs:Input({
-        Title = "Final",
+        Title 
+ = "Final",
         Placeholder = "Ex: 100",
+        Flag = "JJs_EndValue", -- Flag adicionada
         Callback = function(v)
 if v == "" then return end
             endValue = tonumber(v) or 100
@@ -1159,14 +1254,18 @@ if v == "" then return end
 JJs:Toggle({
         Title = "Pular",
         Desc = "Pular ao enviar JJ's.",
+        Flag = "JJs_Jump", -- Flag adicionada
         Callback = function(v)
-            jumpEnabled = v
+           
+  jumpEnabled = v
         end
     })
 
 JJs:Toggle({
         Title = "Espaçamento",
-        Desc = "Separa o sufixo do número. (Ex: UM !)",
+        Desc = "Separa o sufixo do número.
+ (Ex: UM !)",
+        Flag = "JJs_Spacing", -- Flag adicionada
         Callback = function(v)
             spacingEnabled = v
         end
@@ -1176,14 +1275,17 @@ JJs:Space()
 JJs:Toggle({
         Title = "Intervalo inteligente",
         Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
+        Flag = "JJs_SmartDelay", -- Flag adicionada
         Callback = function(v)
             finishInTimeEnabled = v
-        end
+       
+  end
     })
 
     JJs:Input({
         Title = "Tempo (segundos)",
         Placeholder = "Ex: 100",
+        Flag = "JJs_FinishTime", -- Flag adicionada
         Callback = function(v)
 if v == "" then return end
             finishTotalTime = tonumber(v) or 60
@@ -1193,8 +1295,10 @@ JJs:Space()
 
 JJs:Dropdown({
         Title = "Sufixo",
-        Values = { "!", "?", ".", ",", "/" },
+        Values = { "!", "?", ".", ",", 
+ "/" },
         Value = "!",
+        Flag = "JJs_Suffix", -- Flag adicionada
         Callback = function(v)
             suffix = v
         end
@@ -1204,8 +1308,10 @@ JJs:Space()
     JJs:Input({
         Title = "Sufixo customizado",
         Placeholder = "Ex: @",
+        Flag = "JJs_CustomSuffix", -- Flag adicionada
         Callback = function(v)
             customSuffix = tostring(v or "")
+ 
         end
     })
 
@@ -1218,16 +1324,19 @@ local intervalos = Auto:Section({
     intervalos:Input({
         Title = "Intervalo fixo (segundos)",
         Placeholder = "Ex: 1.5",
+        Flag = "JJs_DelayFixed", -- Flag adicionada
         Callback = function(v)
 if v == "" then return end
             delayValue = tonumber(v) or 1.5
         end
-    })
+  
+   })
 intervalos:Space()
 
     intervalos:Toggle({
         Title = "Intervalo dinâmico",
         Desc  = "Usa um intervalo aleatório entre mínimo e máximo.",
+        Flag = "JJs_DelayRandomToggle", -- Flag adicionada
         Callback = function(v)
             randomDelayEnabled = v
         end
@@ -1236,7 +1345,9 @@ intervalos:Space()
     intervalos:Input({
         Title = "Valor mínimo",
         Placeholder = "Ex: 1",
-        Callback = function(v)
+   
+      Flag = "JJs_DelayRandomMin", -- Flag adicionada
+      Callback = function(v)
 if v == "" then return end
             randomMin = tonumber(v) or 1
         end
@@ -1245,9 +1356,11 @@ if v == "" then return end
     intervalos:Input({
         Title = "Valor máximo",
         Placeholder = "Ex: 3",
+        Flag = "JJs_DelayRandomMax", -- Flag adicionada
         Callback = function(v)
 if v == "" then return end
             randomMax = tonumber(v) or 3
+ 
         end
     })
 
@@ -1260,6 +1373,7 @@ local Extras = Auto:Section({
     Extras:Toggle({
         Title = "Modo reverso",
         Desc  = "Conta de trás pra frente.",
+        Flag = "JJs_Reverse", -- Flag adicionada
         Callback = function(v)
             reverseEnabled = v
         end
@@ -1268,8 +1382,7 @@ end
 
 
 -- TUDO TEVEZ!!
-
-if TEVEZ_MAPA then
+ if TEVEZ_MAPA then
 
 do
 local TevezApenas = Window:Section({
@@ -1301,7 +1414,8 @@ local function HasGun()
     local bp = Player:FindFirstChild("Backpack")
     local char = Player.Character
 
-    for _, cfg in ipairs(GC:GetChildren()) do
+    
+ for _, cfg in ipairs(GC:GetChildren()) do
         local n = cfg.Name
         if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
             return true
@@ -1316,7 +1430,8 @@ local function GetGun()
     if not c then return nil end
 
     local tool = c:FindFirstChildWhichIsA("Tool")
-    if not tool then return nil end
+    if not tool 
+ then return nil end
 
     local cfgInstance = GC:FindFirstChild(tool.Name)
     if not cfgInstance then return nil end
@@ -1329,7 +1444,8 @@ local function GetGun()
 if type(getgc) == "function" then
     for _, v in ipairs(getgc()) do
         if type(v) == "table" and rawget(v, "BackCFrame") and rawget(v, "Damage") then
-            if rawget(v, "Name") == tool.Name or rawget(v, "Title") == tool.Name then
+            if rawget(v, 
+ "Name") == tool.Name or rawget(v, "Title") == tool.Name then
                 return v, tool.Name
             end
         end
@@ -1345,7 +1461,8 @@ local function ModifyGun(prop, val)
     if not cfg then
         Notify("Erro", "Não foi possível obter configuração da arma.")
         return
-    end
+  
+   end
 
 -- Check da propriedade
     if rawget(cfg, prop) == nil then
@@ -1363,7 +1480,8 @@ trackTask(task.spawn(function()
         local c = Player.Character
         if not c then continue end
 
-        local tool = c:FindFirstChildWhichIsA("Tool")
+    
+     local tool = c:FindFirstChildWhichIsA("Tool")
         if not tool then continue end
 
         pcall(function()
@@ -1379,59 +1497,74 @@ trackTask(task.spawn(function()
 
     while Active do
         if Aura and HasGun() and Player.Character then
-            local c = Player.Character
+            local 
+ c = Player.Character
             local tool = c:FindFirstChildWhichIsA("Tool")
 
             if tool then
                 local cfgInstance = GC:FindFirstChild(tool.Name)
                 if cfgInstance then
                     local cfgData = (pcall(function() return require(cfgInstance) end) and require(cfgInstance)) or nil
-                    local firePart = tool:FindFirstChild("FirePart") or tool:FindFirstChild("Handle") or tool.PrimaryPart
+  
+                   local firePart = tool:FindFirstChild("FirePart") or tool:FindFirstChild("Handle") or tool.PrimaryPart
                     if firePart then
                         rp.FilterDescendantsInstances = {Player.Character}
 
-                        local target, dist = nil, math.huge
+                        local target, dist 
+ = nil, math.huge
 
                         for _, plr in ipairs(Players:GetPlayers()) do
                             if plr ~= Player and plr.Team ~= Player.Team and plr.Character then
-                                local h = plr.Character:FindFirstChildOfClass("Humanoid")
+                               
+  local h = plr.Character:FindFirstChildOfClass("Humanoid")
                                 if h and h.Health > 0 then
                                     local head = plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
-                                    if head then
+                 
+                    if head then
                                         local d = (head.Position - firePart.Position).Magnitude
-                                        if d < dist then
+                                  
+       if d < dist then
                                             dist = d
-                                            target = head
+                                            
+ target = head
                                         end
                                     end
-                                end
+                      
+           end
                             end
                         end
 
                         if target then
-                            local direction = target.Position - firePart.Position
+            
+                 local direction = target.Position - firePart.Position
                             local result = workspace:Raycast(firePart.Position, direction.Unit * direction.Magnitude, rp)
 
                             local hitPos = (result and result.Position) or target.Position
-                            local info = {
+         
+                    local info = {
                                 [target] = {
-                                    Normal   = (result and result.Normal) or Vector3.new(0,1,0),
+                                    Normal   = (result and result.Normal) or 
+ Vector3.new(0,1,0),
                                     Position = hitPos,
                                     Instance = target,
-                                    Distance = direction.Magnitude,
+                        
+             Distance = direction.Magnitude,
                                     Material = (result and result.Material) or Enum.Material.ForceField
                                 }
-                            }
+            
+                 }
 
                             pcall(function()
                                 FireEvent:FireServer(tool, info, hitPos)
-                            end)
+                      
+       end)
 
                             reg(target.Parent)
                         end
                     end
                 end
-            end
+      
+       end
         end
 
         task.wait()
@@ -1452,9 +1585,11 @@ do
     })
 
     SectionKillAura:Paragraph({
-        Title = "Kill Aura [RISCO DE BAN]",
+    
+     Title = "Kill Aura [RISCO DE BAN]",
         Color = Color3.fromHex("#FF1D0D"),
-        Desc = "Enquanto estiver com a arma, mata todos os inimigos ao redor de você. Não mata inimigos em safezones.",
+        Desc = "Enquanto estiver com a arma, mata todos os inimigos ao redor de você.
+ Não mata inimigos em safezones.",
     })
 
 local KillAuraToggle
@@ -1462,12 +1597,14 @@ local KillAuraToggle
 SectionKillAura:Toggle({
     Title = "Permitir",
     Desc = "O uso de kill aura é de sua conta e risco, você será banido caso for denunciado. Use uma alt.",
+    Flag = "Tevez_PermitirKA", -- Flag adicionada
     Callback = function(state)
         if state then
             KillAuraToggle:Unlock()
             Notify("Permissão", "Concedida")
         else
-            KillAuraToggle:Set(false) 
+           
+  KillAuraToggle:Set(false) 
             
             KillAuraToggle:Lock()
             Notify("Permissão", "Negada.")
@@ -1477,16 +1614,19 @@ SectionKillAura:Toggle({
 
 KillAuraToggle = SectionKillAura:Toggle({
     Title = "Kill-aura [RISCO DE BAN]",
+    Flag = "Tevez_KillAuraToggle", -- Flag adicionada
     Callback = function(state)
         if state then
             if not HasGun() then
-                Blocker = true
+       
+          Blocker = true
                 KillAuraToggle:Set(false)
                 Notify("Erro", "Você precisa de uma arma.")
                 return
             end
             Aura = true
-            Blocker = false
+          
+   Blocker = false
             Notify("Script", "[KILL-AURA] Ativado")
         else
             Aura = false
@@ -1505,23 +1645,27 @@ local SectionArma = TevezMods:Section({
     })
 
     local bulletsValue = nil
-    local spreadValue  = nil
+    local spreadValue 
+ = nil
     local rangeValue   = nil
 
     SectionArma:Paragraph({
         Title = "Bullets",
-        Desc = "Modifica a quantidade de balas que saem da arma por disparo. Além disso, multiplica o dano por hit.",
+        Desc = "Modifica a quantidade de balas que saem da arma por disparo.
+ Além disso, multiplica o dano por hit.",
     })
 
     SectionArma:Input({
         Title = "Bullets",
         Placeholder = "Valor",
+        Flag = "Tevez_BulletsValue", -- Flag adicionada
         Callback = function(v)
 if v == "" then return end
             local n = tonumber(v)
             bulletsValue = n
             if n then
-                Notify("Bullets", "Valor: "..tostring(n))
+       
+          Notify("Bullets", "Valor: "..tostring(n))
             else
                 Notify("Bullets", "Inválido")
             end
@@ -1531,17 +1675,20 @@ if v == "" then return end
 
     SectionArma:Paragraph({
         Title = "Spread",
-        Desc = "Controla a dispersão dos tiros. Quanto maior, mais espalhado os tiros sairão da arma. Quanto menor, mais juntas as balas ficarão.",
+        Desc = "Controla a dispersão dos tiros. Quanto maior, mais 
+ espalhado os tiros sairão da arma. Quanto menor, mais juntas as balas ficarão.",
     })
 
     SectionArma:Input({
         Title = "Spread",
         Placeholder = "Valor",
+        Flag = "Tevez_SpreadValue", -- Flag adicionada
         Callback = function(v)
             local n = tonumber(v)
 if v == "" then return end
             spreadValue = n
             if n then
+ 
                 Notify("Spread", "Valor: "..tostring(n))
             else
                 Notify("Spread", "Inválido")
@@ -1552,18 +1699,21 @@ if v == "" then return end
 
     SectionArma:Paragraph({
         Title = "Range",
-        Desc = "Distância pela qual o disparo consegue chegar.",
+        Desc = "Distância pela 
+ qual o disparo consegue chegar.",
     })
 
     SectionArma:Input({
         Title = "Range",
         Placeholder = "Valor",
+        Flag = "Tevez_RangeValue", -- Flag adicionada
         Callback = function(v)
             local n = tonumber(v)
 if v == "" then return end
             rangeValue = n
             if n then
-                Notify("Range", "Valor: "..tostring(n))
+         
+        Notify("Range", "Valor: "..tostring(n))
             else
                 Notify("Range", "Inválido")
             end
@@ -1574,7 +1724,8 @@ if v == "" then return end
     SectionArma:Paragraph({
         Title = "Aplicar mods",
         Desc = "Aplica as modificações na arma equipada.",
-    })
+    
+ })
 
     SectionArma:Button({
         Title = "Aplicar mods",
@@ -1583,7 +1734,8 @@ if v == "" then return end
                 Notify("Erro", "Equipe uma arma para modificar.")
                 return
             end
-            if bulletsValue then ModifyGun("Bullets", bulletsValue) end
+           
+  if bulletsValue then ModifyGun("Bullets", bulletsValue) end
             if spreadValue then ModifyGun("Spread", spreadValue) end
             if rangeValue then ModifyGun("Range", rangeValue) end
             Notify("Mods", "Aplicações feitas.")
@@ -1603,7 +1755,8 @@ local ModoSeguro       = (cfg and cfg.ModoSeguro) or false
 local RaioDeSeguranca  = (cfg and cfg.RaioDeSeguranca) or 60
 
 local PS = game:GetService("Players")
-local WS = game:GetService("Workspace")
+local 
+ WS = game:GetService("Workspace")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -1641,7 +1794,8 @@ end
 ref()
 
 local function tp(v)
-	if char and root then
+	if char and root 
+ then
 		char:PivotTo(CFrame.new(v))
 	end
 end
@@ -1685,7 +1839,8 @@ local function dinheiro()
 			local att = h:FindFirstChild("DataAttachment")
 			if not att then continue end
 			local gui = att:FindFirstChild("BillboardGui")
-			if not gui then continue end
+			if 
+ not gui then continue end
 			local l = gui.Frame:FindFirstChild("Money")
 			if l then return tonumber(l.Text:match("%d+")) or 0 end
 		end
@@ -1701,7 +1856,8 @@ local function seguro()
 		if p ~= plr and p.Character then
 			local hrp = p.Character:FindFirstChild("HumanoidRootPart")
 			if hrp and (hrp.Position - root.Position).Magnitude <= RaioDeSeguranca then
-				UpdateStatus("MODO SEGURO: Há algum player por perto. Aguardando...")
+				UpdateStatus("MODO SEGURO: Há algum player por perto.
+ Aguardando...")
 				tps()
 				repeat
 					task.wait(0.4)
@@ -1761,7 +1917,8 @@ end
 local function farm()
     if rodando or not _G.AutoFarm then return end
     
-    if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
+    if plr.leaderstats.Dinheiro.Value 
+ < MIN_MONEY_REQUIRED then
         UpdateStatus("FALHA: Necessário R$" .. MIN_MONEY_REQUIRED .. " para comprar C4.")
         rodando = false
         return
@@ -1773,10 +1930,12 @@ local function farm()
         if not aberto() then
             UpdateStatus("Esperando o banco abrir...")
             repeat task.wait(0.2) until aberto() or not _G.AutoFarm
-            if not _G.AutoFarm then rodando = false return end
+     
+        if not _G.AutoFarm then rodando = false return end
         end
 
-        UpdateStatus("Banco abriu! Indo comprar a C4...")
+        UpdateStatus("Banco abriu!
+ Indo comprar a C4...")
 
 		c4Comprada = false
 		if not tentarComprarC4() then
@@ -1794,7 +1953,8 @@ local function farm()
 		local function usarC4AteSumir()
 		    UpdateStatus("Plantando a C4...")
 		    while aberto() and _G.AutoFarm do
-		        if seguro() then continue end
+		        if seguro() 
+ then continue end
 		        local c4Tool = item("C4")
 		        if not c4Tool then
 		            break
@@ -1840,7 +2000,8 @@ plr.CharacterAdded:Connect(function()
 	task.wait(0.3)
 	ref()
 	if _G.AutoFarm then 
-		UpdateStatus("Você morreu. Reiniciando farm")
+		UpdateStatus("Você morreu.
+ Reiniciando farm")
 		farm() 
 	end
 	char:WaitForChild("Humanoid").Died:Connect(function()
@@ -1893,6 +2054,7 @@ FarmStatus = Cash:Paragraph({
     Color = "Green",
     Image = "",
     ImageSize = 30,
+ 
     Thumbnail = "",
     ThumbnailSize = 80,
     Locked = false,
@@ -1905,18 +2067,21 @@ UpdateStatus("Aguardando...")
 local AutofarmToggle = Cash:Toggle({
     Title = "Autofarm",
     Desc = "Ativa ou desativa o autofarm.",
+    Flag = "Autofarm_Toggle", -- Flag adicionada
     Callback = function(v)
         _G.AutoFarm = v
 
         if v then
             if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
-                Notify("Erro", "Necessário R$" .. MIN_MONEY_REQUIRED .. " para iniciar o autofarm.")
+              
+   Notify("Erro", "Necessário R$" .. MIN_MONEY_REQUIRED .. " para iniciar o autofarm.")
                 AutofarmToggle:Set(false) 
                 _G.AutoFarm = false
                 return
             end
             
-            rodando = false
+            rodando 
+ = false
             DinheiroInicial = plr.leaderstats.Dinheiro.Value
             DinheiroFarmado = 0
             UpdateStatus("Autofarm iniciado")
@@ -1925,6 +2090,7 @@ local AutofarmToggle = Cash:Toggle({
             UpdateStatus("Autofarm desativado")
             rodando = false 
         end
+ 
     end
 })
 Cash:Space()
@@ -1932,6 +2098,7 @@ Cash:Space()
 Cash:Toggle({
     Title = "Modo seguro",
     Desc = "Interrompe o autofarm caso alguém esteja a uma X distância de você.",
+    Flag = "Autofarm_ModoSeguro", -- Flag adicionada
     Callback = function(v)
         ModoSeguro = v
         Notify("Modo Seguro", v and "Ativado" or "Desativado")
@@ -1942,6 +2109,8 @@ Cash:Input({
     Title = "Raio de segurança",
     Desck = "Se alguém estiver dentro desse raio, interromperá o autofarm até que não haja ninguém nesse mesmo raio.",
     Placeholder = "Ex: 60 (recomendado)",
+ 
+    Flag = "Autofarm_RaioSeguranca", -- Flag adicionada
     Callback = function(v)
         if v == "" then return end
         local n = tonumber(v)
@@ -1951,7 +2120,8 @@ Cash:Input({
         end
         RaioDeSeguranca = n
         Notify("NOVO VALOR", ""..tostring(n))
-    end
+   
+  end
 })
 end -- Section do Tevez
 end -- Tab do tevez
@@ -1974,7 +2144,8 @@ do
         Method = "GET",
         Headers = {
             ["User-Agent"] = "WindUI/Example",
-            ["Accept"] = "application/json"
+         
+    ["Accept"] = "application/json"
         }
     }).Body)
 
@@ -1992,14 +2163,16 @@ if Response and Response.guild then
 
     DiscordTab:Paragraph({
         Title = tostring(Response.guild.name),
-        Desc = "Servidor de exploits para Roblox",
+        Desc 
+ = "Servidor de exploits para Roblox",
         Image = "https://cdn.discordapp.com/icons/" .. Response.guild.id .. "/" .. Response.guild.icon .. ".png?size=1024",
         Thumbnail = "https://cdn.discordapp.com/attachments/1421660082579443816/1448274350334672936/6b44c0cf-d656-4e76-9e00-a5db9a88c206.jpg?ex=693aaa18&is=69395898&hm=d24f012ab9312bd635f1eb89c86b605d5bb2c647b30ee2073de1778112be1306&",
         ImageSize = 80,
         Buttons = {
             {
                 Title = "Copiar link!",
-                Icon = "link",
+                
+ Icon = "link",
                 Callback = function()
                     setclipboard("https://discord.gg/" .. InviteCode)
                 end
@@ -2017,7 +2190,8 @@ end
 do
 local Sugestoes = Outros:Tab({ Title = "Sugestões", Icon = "lucide:message-circle", IconColor = Yellow })
 
-local requestFunc = syn and syn.request or request or http_request
+local 
+ requestFunc = syn and syn.request or request or http_request
 local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
 
 -- ======================================================
@@ -2046,7 +2220,8 @@ end
 local function Load()
     if not isfile(fileName) then
         Save()
-        return
+        
+ return
     end
     
     local ok, data = pcall(function()
@@ -2073,7 +2248,8 @@ end
 
 local function EnviarPayload(isSug, texto, nota, anonimo)
     local hook = isSug and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
-    local nome = anonimo and "Anônimo" or player.Name
+    local nome = anonimo and "Anônimo" or 
+ player.Name
 
     local embed = {
         title = (isSug and "Sugestão feita por: " .. nome or "Avaliação feita por: " .. nome),
@@ -2081,7 +2257,8 @@ local function EnviarPayload(isSug, texto, nota, anonimo)
             and ("\n> **" .. texto .. "**\n")
             or ("Nota: **" .. nota .. "/10**\n\n> **" .. texto .. "**\n"),
         timestamp = isoTimestamp(),
-        color = 14280458
+       
+  color = 14280458
     }
 
     requestFunc({
@@ -2092,14 +2269,16 @@ local function EnviarPayload(isSug, texto, nota, anonimo)
             username = isSug and "Sugestão" or "Avaliação",
             embeds = { embed }
         })
-    })
+   
+  })
 end
 
 -- ======================================================
 --  SUGESTÃO
 -- ======================================================
 
-local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
+local sugestao = Sugestoes:Section({ Title = "Sugestão?
+ Envie-me!" })
 
 local anonimatoSug = false
 sugestao:Toggle({
@@ -2121,7 +2300,8 @@ sugestao:Button({
 
         -- COOLDOWN
         if now < Saved.sugestao then
-            local rest = Saved.sugestao - now
+        
+     local rest = Saved.sugestao - now
             Notify("COOLDOWN!", "Você só pode enviar outra sugestão em " .. rest .. " segundos.")
             return
         end
@@ -2129,7 +2309,8 @@ sugestao:Button({
         if sugestaoBox.Value == "" then
             Notify("Erro", "Digite algo antes de enviar.")
             return
-        end
+     
+    end
 
         -- atualiza o cooldown
         Saved.sugestao = now + COOLDOWN_SUGESTAO
@@ -2155,7 +2336,8 @@ avaliar:Toggle({
 
 local avaliarNota = "10"
 avaliar:Dropdown({
-    Title = "Nota",
+  
+   Title = "Nota",
     Desc = "Escolha a nota",
     Values = { "1","2","3","4","5","6","7","8","9","10" },
     Value = "10",
@@ -2174,7 +2356,8 @@ avaliar:Button({
         local now = os.time()
 
         -- COOLDOWN
-        if now < Saved.avaliacao then
+        if now < 
+ Saved.avaliacao then
             local rest = Saved.avaliacao - now
             Notify("Espere!", "Você só pode enviar outra avaliação em " .. rest .. " segundos.")
             return
@@ -2182,7 +2365,8 @@ avaliar:Button({
 
         if avaliarBox.Value == "" then
             Notify("Erro", "Escreva sua avaliação antes de enviar.")
-            return
+       
+      return
         end
 
         -- atualiza o cooldown
@@ -2201,8 +2385,11 @@ local configuracoes = Window:Tab({ Title = "Configurações", Icon = "geist:sett
 
 configuracoes:Input({
     Title = "Palavra secreta",
-    Desc = "Palavra ou frase que será digitada no chat para abrir / fechar a UI. Padrão: .",
+    Desc = "Palavra ou frase que 
+ será digitada no chat para abrir / fechar a UI.
+ Padrão: .",
     Placeholder = "Ex: /e",
+    Flag = "Config_SecretWord", -- Flag adicionada
     Callback = function(v)
         local has_space = string.find(v or "", "%s")
         local is_empty = string.len(v or "") == 0
@@ -2210,14 +2397,16 @@ configuracoes:Input({
         if not is_empty and not has_space then
             SecretWord = v
             setupChatToggle()
-            Notify("Palavra Secreta", "Definida para: " .. v .. " para abrir a UI.")
+         
+    Notify("Palavra Secreta", "Definida para: " .. v .. " para abrir a UI.")
         else
             -- Notificação de erro
             Notify("Erro", "A palavra secreta não pode ser vazia nem conter espaços.")
             
             SecretWord = "/e"
             setupChatToggle()
-            Notify("Palavra Secreta", "Resetada para: /e")
+  
+           Notify("Palavra Secreta", "Resetada para: /e")
         end
     end
 })
@@ -2242,7 +2431,8 @@ end
 local function loadConfig(configName)
     if not configName then return end
 
-    CurrentConfig = ConfigManager:CreateConfig(configName)
+    CurrentConfig = 
+ ConfigManager:CreateConfig(configName)
     
     CurrentConfig:Load()
     Notify("Configuração", "Configuração '" .. configName .. "' carregada com sucesso.")
@@ -2257,7 +2447,8 @@ local function refreshDropdown()
     if ConfigDropdownElement and ConfigDropdownElement.SetValues then -- Usaremos SetValues ou Refresh
         -- Assumindo que a sintaxe seja SetValues/Refresh com a tabela de valores
         ConfigDropdownElement:SetValues(names) 
-        
+      
+   
         if table.find(names, CurrentConfig.Name) then
              ConfigDropdownElement:SetValue(CurrentConfig.Name)
         else
@@ -2275,7 +2466,8 @@ local ConfigSection = configuracoes:Section({
 })
 
 ConfigDropdownElement = ConfigSection:Dropdown({
-    Title = "Configurações Salvas",
+    Title 
+ = "Configurações Salvas",
     Desc = "Selecione e carregue uma configuração existente.",
     Values = getSavedConfigs(), 
     Value = CurrentConfig.Name,
@@ -2296,7 +2488,8 @@ ConfigNameInput = ConfigSection:Input({
 
 ConfigSection:Button({
     Title = "Salvar Configuração",
-    Desc = "Salva ou sobrescreve a configuração atual com o nome digitado acima.",
+    Desc = "Salva ou sobrescreve a configuração atual com 
+ o nome digitado acima.",
     Callback = function()
         local v = ConfigNameInput.Value
         
@@ -2305,7 +2498,8 @@ ConfigSection:Button({
         if nameToSave == "" then
             Notify("Erro", "Você deve fornecer um nome válido para salvar.")
             return
-        end
+     
+    end
         
         CurrentConfig = ConfigManager:CreateConfig(nameToSave)
         CurrentConfig:Save()
@@ -2321,7 +2515,8 @@ ConfigSection:Space()
 
 ConfigSection:Button({
     Title = "Deletar Configuração Atual",
-    Desc = "Exclui a configuração atualmente selecionada.",
+    
+ Desc = "Exclui a configuração atualmente selecionada.",
     Callback = function()
         if CurrentConfig.Name == "fp3_configs" then
             Notify("Erro", "Não é possível deletar a configuração padrão (fp3_configs).")
@@ -2331,6 +2526,7 @@ ConfigSection:Button({
         local deletedName = CurrentConfig.Name
         
         CurrentConfig:Delete() 
+ 
         Notify("Configuração", "Configuração '" .. deletedName .. "' deletada.")
         
         loadConfig("fp3_configs")
@@ -2343,10 +2539,12 @@ ConfigSection:Space()
 ConfigSection:Toggle({
     Title = "Autoload (Padrão)",
     Desc = "Carrega a última configuração salva automaticamente ao iniciar o script.",
+    Flag = "Config_AutoloadToggle", -- Flag adicionada
     Default = true, 
     Callback = function(v)
         if v then
-            loadConfig("fp3_configs")
+     
+        loadConfig("fp3_configs")
             Notify("Autoload", "Configuração padrão carregada.")
         end
     end
@@ -2372,4 +2570,4 @@ end
 
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/M0vi/k/refs/heads/main/k"))()
---logs 
+--logs
