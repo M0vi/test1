@@ -160,23 +160,10 @@ Desenvolvido e mantido por @fp3, em LuaU. Isso é apenas um hobby.]],
 end
 
 -- =========================
--- 5) SEÇÕES
+-- 5) ElementSection
 -- =========================
 local ElementsSection = Window:Section({
     Title = "Scripts",
-})
-
-if TEVEZ_MAPA then
-    local TevezApenas = Window:Section({
-    Title = "[EB] Tevez",
-    Desc = "Exclusivos do jogo",
-    Icon = "lucide:gamepad-2",
-    IconColor = Color3.fromHex("#1C3811")
-})
-end
-
-local Outros = Window:Section({
-    Title = "Outros",
 })
 
 -- =========================
@@ -1265,6 +1252,14 @@ end
 
 if TEVEZ_MAPA then
 
+do
+local TevezApenas = Window:Section({
+    Title = "[EB] Tevez",
+    Desc = "Exclusivos do jogo",
+    Icon = "lucide:gamepad-2",
+    IconColor = Color3.fromHex("#1C3811")
+})
+
 -- KILL AURA
 
 local GS = Replicated:WaitForChild("GunSystem")
@@ -1932,7 +1927,13 @@ if v == "" then return end
 })
 
 end -- Section do Tevez
+end -- Tab do tevez
 
+
+
+local Outros = Window:Section({
+    Title = "Outros",
+})
 
 -- =========================
 -- 10) DISCORD
