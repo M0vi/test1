@@ -1,0 +1,166 @@
+-- === CORREÇÃO: VARIÁVEIS DE CONFIGURAÇÃO LOCAIS (SEM Getgenv() na primeira linha) ===
+local SilentAim = true
+local Fov = 250
+local ShowFovCircle = true
+
+-- Funções auxiliares para simular o acesso a `getgenv()` no resto do script
+local function getgenv()
+    return {
+        SilentAim = SilentAim,
+        Fov = Fov,
+        ShowFovCircle = ShowFovCircle,
+    }
+end
+local function Getgenv() return getgenv() end
+
+-- === DEFINIÇÕES E VARIÁVEIS ESSENCIAIS ===
+local FovColor = Color3.fromRGB(255, 255, 255)
+local FovLockedColor = Color3.fromRGB(255, 0, 0)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local CFrame_new = CFrame.new 
+
+local currentTarget = nil
+local ClosestHitPart = nil 
+local FovCircle = Drawing.new("Circle")
+FovCircle.Thickness = 1
+FovCircle.Filled = false
+FovCircle.NumSides = 64
+
+-- === LOCALIZAÇÃO DO REMOTE ===
+local GS = ReplicatedStorage:WaitForChild("GunSystem")
+local FireEvent = GS.Remotes.Events.Fire 
+
+
+-- === FUNÇÕES DE DETECÇÃO DE ALVO ===
+local function getClosestPlayer()
+    local ClosestPart, DistanceToMouse
+    local viewportSize = Camera.ViewportSize
+    local centerScreen = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    
+    for _, Player in pairs(Players:GetPlayers()) do
+        if Player == LocalPlayer then continue end
+        if Player.Team == LocalPlayer.Team then continue end
+        local Character = Player.Character
+        if not Character then continue end
+        local Humanoid = Character:FindFirstChild("Humanoid")
+        if not Humanoid or Humanoid.Health <= 0 then continue end
+        
+        local TargetPart = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso") 
+        
+        if TargetPart then
+            local LocalPlayerCharacter = LocalPlayer.Character
+            if LocalPlayerCharacter then
+                local rayParams = RaycastParams.new()
+                rayParams.FilterDescendantsInstances = {LocalPlayerCharacter, Character}
+                rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+                local origin = Camera.CFrame.Position
+                local direction = (TargetPart.Position - origin)
+                local rayResult = Workspace:Raycast(origin, direction, rayParams)
+                if rayResult and not rayResult.Instance:IsDescendantOf(Character) then continue end
+            end
+            
+            local ScreenPosition, OnScreen = Camera:WorldToScreenPoint(TargetPart.Position)
+            if OnScreen then
+                local Distance = (centerScreen - Vector2.new(ScreenPosition.X, ScreenPosition.Y)).Magnitude
+                if Distance <= getgenv().Fov and Distance < (DistanceToMouse or getgenv().Fov + 1) then
+                    ClosestPart = TargetPart
+                    DistanceToMouse = Distance
+                end
+            end
+        end
+    end
+    return ClosestPart
+end
+
+-- === LOOP DE RENDERIZAÇÃO E ATUALIZAÇÃO DO ALVO ===
+RunService.RenderStepped:Connect(function()
+    if not getgenv().ShowFovCircle then
+        FovCircle.Visible = false
+    else
+        FovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        FovCircle.Radius = getgenv().Fov
+        FovCircle.Visible = true
+    end
+    
+    ClosestHitPart = getClosestPlayer()
+    currentTarget = ClosestHitPart and ClosestHitPart.Parent
+    
+    FovCircle.Color = currentTarget and FovLockedColor or FovColor
+end)
+
+-- === HOOK 1: Manipula workspace:Raycast ===
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
+    local Method, Arguments = getnamecallmethod(), {...}
+    local self = Arguments[1]
+    if self == Workspace and not checkcaller() and Method == "Raycast" then
+        local HitPart = ClosestHitPart
+        if HitPart then
+            local origin = Arguments[2]
+            local direction = (HitPart.Position - origin).Unit * 1000
+            Arguments[2], Arguments[3] = origin, direction
+            return oldNamecall(unpack(Arguments))
+        end
+    end
+    return oldNamecall(...)
+end))
+
+
+-- === HOOK 2: Manipula RemoteEvent:FireServer ===
+local oldFireServer = FireEvent.FireServer 
+
+if hookmetamethod then
+    hookmetamethod(FireEvent, "__namecall", function(self, ...)
+        local namecallMethod = getnamecallmethod()
+        local args = table.pack(...)
+
+        if namecallMethod == "FireServer" and self == FireEvent and #args >= 3 then
+            
+            if getgenv().SilentAim and ClosestHitPart then
+                
+                local tool = args[1] 
+                local targetPart = ClosestHitPart
+                local targetCharacter = ClosestHitPart.Parent
+                
+                local firePart = tool:FindFirstChild("FirePart") or tool:FindFirstChild("Handle") or tool.PrimaryPart
+                
+                if firePart and targetPart and targetCharacter then
+                    
+                    local direction = targetPart.Position - firePart.Position
+                    
+                    local rayParams = RaycastParams.new()
+                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, targetCharacter}
+                    local result = Workspace:Raycast(firePart.Position, direction.Unit * direction.Magnitude, rayParams)
+                    
+                    local hitPos = targetPart.Position
+                    local surfacePos = firePart.Position + direction
+
+                    local info_table = {
+                        [surfacePos] = {
+                            Normal   = (result and result.Normal) or Vector3.new(0,1,0),
+                            Position = hitPos, 
+                            Instance = targetPart,
+                            Distance = direction.Magnitude,
+                            Material = (result and result.Material) or Enum.Material.SmoothPlastic
+                        }
+                    }
+
+                    return oldFireServer(self, tool, info_table, hitPos)
+                end
+            end
+            
+            return oldFireServer(self, unpack(args))
+
+        else
+            return oldFireServer(self, unpack(args))
+        end
+    end)
+end
