@@ -1625,11 +1625,10 @@ local MIN_MONEY_REQUIRED = 1300
 
 local FarmStatus
 
--- NOVOS PONTOS DE MOVIMENTO AFK DINÂMICO (10 studs de distância do CollectPos)
 local AFK_DISTANCE = 10
 local AFK_LEFT_POS = CollectPos - Vector3.new(AFK_DISTANCE, 0, 0)
 local AFK_RIGHT_POS = CollectPos + Vector3.new(AFK_DISTANCE, 0, 0)
-local AFK_SPEED = 0.02
+local AFK_SPEED = 0.03
 
 local Kaio = WS.Map.NPCS.Kaio
 local VENDER_POS = Kaio.HumanoidRootPart.Position - Vector3.new(3, 10, 0)
@@ -1861,7 +1860,7 @@ local function farm()
 			if seguro() then continue end
 
 			if dinheiro() >= 4000 then
-				task.wait(math.random(8,10))
+				task.wait(8)
 				vender()
                 if not aberto() or not _G.AutoFarm then break end 
 			else
