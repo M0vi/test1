@@ -1504,6 +1504,110 @@ local SectionArma = TevezMods:Section({
         Title = "Arma"
     })
 
+local Prices = {
+    ["AK-47"] = 15000,
+    ["MPT-76"] = 8500,
+    ["UZI"] = 8200,
+    ["M4A1"] = 13000,
+    ["GLOCK-18"] = 4300,
+    ["Colete"] = 15000,
+}
+
+local SelectedItems = {} 
+local ToolsShopRemote = RunService:WaitForChild("Assets"):WaitForChild("Remotes"):WaitForChild("ToolsShop")
+local Currency = player:WaitForChild("leaderstats"):WaitForChild("Dinheiro") 
+
+local function hasItem(itemName)
+    local checkName = itemName:gsub("-", " ") 
+    return player.Backpack:FindFirstChild(checkName) or (player.Character and player.Character:FindFirstChild(checkName))
+end
+
+local function calculatePurchaseInfo()
+    local eligibleItems = {}
+    local totalPrice = 0
+    
+    for _, itemName in ipairs(SelectedItems) do
+        if Prices[itemName] and not hasItem(itemName) then
+            table.insert(eligibleItems, itemName)
+            totalPrice = totalPrice + Prices[itemName]
+        end
+    end
+    
+    return eligibleItems, totalPrice
+end
+
+local comprargroup = SectionArma:Group()
+
+comprargroup:Dropdown({
+    Title = "Selecionar",
+    Desc = "Seleção de compras",
+    Values = { "GLOCK-18", "AK-47", "M4A1", "MPT-76", "UZI", "Colete"},
+    Value = { "GLOCK-18" },
+    Multi = true,
+    AllowNone = true,
+    Callback = function(newSelectionTable) 
+        SelectedItems = newSelectionTable 
+    end
+})
+comprargroup:Space()
+
+comprargroup:Button({
+    Title = "Comprar",
+    Desc = "Compra as armas",
+    Locked = false,
+    Callback = function()
+        local eligibleItems, totalPrice = calculatePurchaseInfo()
+        
+        if #eligibleItems == 0 then
+            WindUI:Notification({
+                Title = "Compra Negada",
+                Content = "Você já possui todos os itens selecionados ou não selecionou nenhum item elegível.",
+                Icon = "error",
+            })
+            return
+        end
+
+        local currentMoney = Currency.Value
+        
+        -- Checagem de dinheiro
+        if currentMoney < totalPrice then
+            WindUI:Notification({
+                Title = "Compra Negada",
+                Content = string.format("Seu saldo é insuficiente! (R$ %d necessários)", totalPrice),
+                Icon = "error",
+            })
+            return
+        end
+        
+        -- Executa a compra
+        local successCount = 0
+        for _, itemName in ipairs(eligibleItems) do
+            if not hasItem(itemName) then
+                local remoteItemName = itemName:gsub("-", " ") 
+                local args = { "Buy", remoteItemName }
+                ToolsShopRemote:FireServer(unpack(args))
+                successCount = successCount + 1
+                task.wait(0.1) 
+            end
+        end
+        
+        if successCount > 0 then
+            WindUI:Notification({
+                Title = "Compra Concluída",
+                Content = string.format("%d itens comprados com sucesso por R$ %d!", successCount, totalPrice),
+                Icon = "success",
+            })
+        else
+            -- Isso deve ser raro, pois foi checado em #eligibleItems == 0, mas serve como fallback
+             WindUI:Notification({
+                Title = "Nenhuma Compra",
+                Content = "Nenhum item elegível foi encontrado para compra.",
+                Icon = "info",
+            })
+        end
+    end
+})
+
     local bulletsValue = nil
     local spreadValue  = nil
     local rangeValue   = nil
@@ -2019,7 +2123,7 @@ Cash:Input({
 })
 end -- Section do Tevez
 end -- Tab do tevez
-
+end
 
 
 local Outros = Window:Section({
@@ -2311,7 +2415,6 @@ local function setupKeybind()
     end
 end
 
-
 configuracoes:Input({
     Title = "Keybind",
     Desc = "Tecla para abrir e fechar a UI (Apenas letras).",
@@ -2338,7 +2441,6 @@ configuracoes:Input({
         end
     end
 })
-
 
 do
     local TestSection = Window:Section({
