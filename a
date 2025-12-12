@@ -1595,7 +1595,7 @@ end
 -- =========================
 -- Autofarm LÓGICA
 -- =========================
-
+_G.AutoFarm = false
 
 local cfg = ...
 local ModoSeguro = (cfg and cfg.ModoSeguro) or false
@@ -1611,7 +1611,7 @@ local char, root, bag
 
 local bank = WS.Map.Robbery.Bank
 local status = bank.RobberyStatus.SurfaceGui.BankStatus
-local CollectPos = bank.CollectPad.Position
+local CollectPos = bank.CollectPad.Position 
 
 local Remotes = RS.Assets.Remotes
 local BuyShop = Remotes.BuyShop
@@ -1625,14 +1625,52 @@ local MIN_MONEY_REQUIRED = 1300
 
 local FarmStatus
 
--- NOVO PONTO DE ESPERA (20 studs à direita do CollectPos)
--- Usaremos este ponto para o teleporte seguro/espera.
-local WAIT_POS = CollectPos + Vector3.new(8, 0, 0)
+-- NOVOS PONTOS DE MOVIMENTO AFK DINÂMICO (10 studs de distância do CollectPos)
+local AFK_DISTANCE = 10
+local AFK_LEFT_POS = CollectPos - Vector3.new(AFK_DISTANCE, 0, 0)
+local AFK_RIGHT_POS = CollectPos + Vector3.new(AFK_DISTANCE, 0, 0)
+local AFK_SPEED = 0.05
+
+-- Declarações antecipadas para funções que se chamam mutuamente
+local seguro
+local aberto
+local fechado
 
 local function UpdateStatus(msg)
     if FarmStatus and FarmStatus.SetDesc then 
         FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
     end
+end
+
+
+local function tp(v)
+	if char and root then
+		char:PivotTo(CFrame.new(v))
+	end
+end
+
+-- FUNÇÃO PRINCIPAL DE MOVIMENTO AFK
+local function esperaDinamica(delayTime)
+    delayTime = delayTime or 0
+    
+    local startTime = tick()
+    
+    -- Usa as declarações antecipadas
+    while aberto() and _G.AutoFarm and (tick() - startTime < delayTime) do
+        
+        if seguro() then 
+            task.wait(0.1) 
+            continue 
+        end
+        
+        tp(AFK_LEFT_POS + Vector3.new(0, 4, 0))
+        task.wait(AFK_SPEED)
+
+        tp(AFK_RIGHT_POS + Vector3.new(0, 4, 0))
+        task.wait(AFK_SPEED)
+    end
+    
+    return not aberto() or not _G.AutoFarm
 end
 
 
@@ -1643,30 +1681,21 @@ local function ref()
 end
 ref()
 
-local function tp(v)
-	if char and root then
-		char:PivotTo(CFrame.new(v))
-	end
-end
-
--- Função modificada para usar o novo ponto de espera
-local function tps()
-	-- Teleporta para o WAIT_POS, um pouco acima do chão
-	tp(WAIT_POS + Vector3.new(0, 4, 0)) 
-end
 
 local function item(n)
 	local b = plr:FindFirstChild("Backpack")
 	return (b and b:FindFirstChild(n)) or (char and char:FindFirstChild(n))
 end
 
-local function aberto()
+-- Definições de status
+aberto = function()
 	return status.Text == "ABERTO"
 end
 
-local function fechado()
+fechado = function()
     return status.Text == "FECHADO"
 end
+
 
 local function spin()
 	char:PivotTo(root.CFrame * CFrame.Angles(0, math.rad(30), 0))
@@ -1688,10 +1717,10 @@ local function dinheiro()
 	return 0
 end
 
-local function seguro()
+-- Definição de seguro (que usa 'aberto' e 'fechado')
+seguro = function()
 	if not ModoSeguro then return false end
 	if not root then return false end
-    -- Se o farm não está ativo ou o banco fechou, não precisa de seguro
     if not _G.AutoFarm or fechado() then return false end 
 
 	for _,p in ipairs(PS:GetPlayers()) do
@@ -1699,21 +1728,22 @@ local function seguro()
 			local hrp = p.Character:FindFirstChild("HumanoidRootPart")
 			if hrp and (hrp.Position - root.Position).Magnitude <= RaioDeSeguranca then
 				UpdateStatus("MODO SEGURO: Há algum player por perto. Aguardando...")
-				tps()
+                
+                tp(AFK_LEFT_POS + Vector3.new(0, 4, 0)) 
+                
 				repeat
 					task.wait(0.4)
-				until not _G.AutoFarm or fechado() -- Adicionada verificação de banco fechado
+				until not _G.AutoFarm or fechado()
 				or not hrp
 				or (hrp.Position - root.Position).Magnitude > RaioDeSeguranca
                 
                 if not _G.AutoFarm or fechado() then 
-                    -- Se saiu do loop por causa do _G.AutoFarm ou fechado(), retorna true para interromper a ação atual
                     UpdateStatus("Farm interrompido (Modo Seguro/Banco Fechado)")
                     return true 
                 end
 
 				UpdateStatus("Retomando farm...")
-				return true -- Retorna true para pular a iteração atual e verificar o status novamente
+				return true 
 			end
 		end
 	end
@@ -1745,32 +1775,29 @@ local VENDER_POS = Vector3.new(-742,-7,-536)
 
 local function vender()
 	UpdateStatus("Entregando...")
-    -- Verifica o seguro e o status do farm antes de vender
 	if seguro() or not _G.AutoFarm or fechado() then return end 
 
 	tp(VENDER_POS + Vector3.new(math.random(-3,3), math.random(-1,1), math.random(-3,3)))
 	task.wait(0.2)
-    -- Loop de venda modificado: verifica _G.AutoFarm e fechado()
 	while dinheiro() > 0 and _G.AutoFarm and not fechado() do 
 		if seguro() or not _G.AutoFarm or fechado() then break end
 		Robbery:FireServer("Payment")
 		task.wait(0.1)
 	end
     
-    -- Se o banco fechou durante a venda, não continua o resto
     if not _G.AutoFarm or fechado() then return end
 
 	task.wait(0.5)
 	tp(CollectPos)
 	task.wait(0.1)
-	tps()
+	esperaDinamica(0.5) 
 	local saldoAtual = plr.leaderstats.Dinheiro.Value
 	DinheiroFarmado = saldoAtual - DinheiroInicial
 	UpdateStatus("Sucesso!")
 end
 
+
 local function farm()
-    -- Se já está rodando ou o farm está desativado, sai.
     if rodando or not _G.AutoFarm then return end 
     
     if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
@@ -1784,7 +1811,6 @@ local function farm()
     task.spawn(function()
         if not aberto() then
             UpdateStatus("Esperando o banco abrir...")
-            -- Espera até abrir, mas verifica _G.AutoFarm em cada loop.
             repeat task.wait(0.2) until aberto() or not _G.AutoFarm 
             if not _G.AutoFarm then rodando = false return end
         end
@@ -1792,7 +1818,6 @@ local function farm()
         UpdateStatus("Banco abriu! Indo comprar a C4...")
 
 		c4Comprada = false
-        -- Verifica _G.AutoFarm e fechado() após a compra
 		if not tentarComprarC4() or not _G.AutoFarm or fechado() then 
             UpdateStatus("Erro: Não foi possível comprar C4 ou farm parado.")
             rodando = false
@@ -1807,7 +1832,6 @@ local function farm()
 
 		local function usarC4AteSumir()
 		    UpdateStatus("Plantando a C4...")
-            -- Loop modificado: verifica _G.AutoFarm E aberto()
 		    while aberto() and _G.AutoFarm do 
 		        if seguro() then continue end
 		        local c4Tool = item("C4")
@@ -1822,18 +1846,14 @@ local function farm()
 		tp(vaultPos)
 		task.wait(1)
         
-        -- Verifica _G.AutoFarm e fechado() antes de plantar
         if not _G.AutoFarm or fechado() then rodando = false return end 
         
 		usarC4AteSumir()
         
-        -- Verifica _G.AutoFarm e fechado() após plantar (pode fechar durante a espera da explosão)
 		if not _G.AutoFarm or fechado() then rodando = false return end 
         
-		tps() -- Vai para o ponto de espera enquanto a porta explode
-		task.wait(11)
+		esperaDinamica(11) 
         
-        -- O loop principal de coleta modificado: verifica _G.AutoFarm E aberto()
 		while aberto() and _G.AutoFarm do 
 
 			if seguro() then continue end
@@ -1841,25 +1861,27 @@ local function farm()
 			if dinheiro() >= 4000 then
 				task.wait(math.random(8,10))
 				vender()
-                -- Verifica _G.AutoFarm e aberto() após a venda, pois o banco pode fechar/farm pode ser desativado
                 if not aberto() or not _G.AutoFarm then break end 
 			else
 				UpdateStatus("Coletando dinheiro...")
 				tp(CollectPos)
 				task.wait(0.05)
 				spin()
+                
 				if char.Humanoid.Health < 50 then
-					tps()
-                    -- Espera curar, verificando _G.AutoFarm E aberto()
+					UpdateStatus("Curando...")
+					tp(AFK_LEFT_POS + Vector3.new(0, 4, 0))
+                    
 					repeat task.wait(0.2) until char.Humanoid.Health >= 90 or not _G.AutoFarm or fechado() 
-                    if not _G.AutoFarm or fechado() then break end -- Sai do loop principal se parou
+                    if not _G.AutoFarm or fechado() then break end 
 				end
-				tps()
-				task.wait(0.001)
+                
+                esperaDinamica(0.5)
+                
+                if not aberto() or not _G.AutoFarm then break end 
 			end
 		end
 
-        -- Se saiu do loop, o rodando é definido como false
 		rodando = false 
 	end)
 end
@@ -1867,7 +1889,7 @@ end
 plr.CharacterAdded:Connect(function()
 	task.wait(0.3)
 	ref()
-	if _G.AutoFarm and aberto() then -- Só reinicia o farm se o banco estiver aberto
+	if _G.AutoFarm and aberto() then
 		UpdateStatus("Você morreu. Reiniciando farm")
 		farm() 
 	end
@@ -1875,18 +1897,17 @@ plr.CharacterAdded:Connect(function()
 		rodando = false
 		ref()
 		task.wait(1)
-		if _G.AutoFarm and aberto() then -- Só reinicia o farm se o banco estiver aberto
+		if _G.AutoFarm and aberto() then
 			tp(CollectPos)
-			tps()
+            tp(AFK_LEFT_POS + Vector3.new(0, 4, 0))
 			farm()
 		end
 	end)
 end)
 
--- Conexão para iniciar/parar o farm ao mudar o status do banco
 status:GetPropertyChangedSignal("Text"):Connect(function()
 	if not _G.AutoFarm then 
-        rodando = false -- Garante que o estado seja limpo se o farm estava rodando e foi desativado
+        rodando = false 
         return 
     end
     
@@ -1896,29 +1917,24 @@ status:GetPropertyChangedSignal("Text"):Connect(function()
 	end
     
 	if status.Text == "FECHADO" then
-        -- 1. Interrompe imediatamente o loop principal (a variável rodando será setada como false no task.spawn)
-        -- 2. Permite apenas a venda de dinheiro remanescente
         
 		local agora = tick()
-        -- Evita spam de 'vender' se a venda já ocorreu recentemente
 		if agora - ultimaVenda < 5 then 
-            rodando = false -- **Adicionado: Garante que o rodando=false para que o farm pare**
+            rodando = false
             return 
         end
 		ultimaVenda = agora
         
-        -- Chama a venda, mas o loop interno de 'vender' verifica se o banco fechou
 		task.spawn(function()
 			task.wait(3)
 			if not _G.AutoFarm then return end
 			local d = dinheiro()
-            -- A venda só deve ocorrer se houver dinheiro A SER ENTREGUE, e o farm estiver ativo
 			if d > 0 and _G.AutoFarm then 
 				vender()
 			end
 		end)
         
-        rodando = false -- **Adicionado: Garante que o loop principal (farm/task.spawn) seja finalizado**
+        rodando = false
 	end
 end)
 
@@ -1926,6 +1942,9 @@ plr.CharacterAdded:Connect(function()
 	task.wait(0.5)
 	ref()
 end)
+
+
+
 
 local Cash = TevezApenas:Tab({
     Title = "Autofarm",
