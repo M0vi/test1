@@ -1,4 +1,4 @@
-Getgenv().SilentAim = true      
+getgenv().SilentAim = true      
 getgenv().Fov = 250             
 getgenv().ShowFovCircle = true  
 
