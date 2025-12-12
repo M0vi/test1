@@ -1595,6 +1595,7 @@ end
 -- =========================
 -- Autofarm LÓGICA
 -- =========================
+
 _G.AutoFarm = false
 
 local cfg = ...
@@ -1652,7 +1653,6 @@ local function tp(v)
 	end
 end
 
--- FUNÇÃO PRINCIPAL DE MOVIMENTO AFK
 local function esperaDinamica(delayTime)
     delayTime = delayTime or 0
     
@@ -1777,13 +1777,12 @@ local function vender()
 	UpdateStatus("Entregando...")
 	if seguro() or not _G.AutoFarm or fechado() then return end 
 
-    -- Teleporta para o novo VENDER_POS (atrás do Kaio)
-	tp(VENDER_POS + Vector3.new(math.random(-1,1), math.random(-1,1), math.random(-1,1))) 
-	task.wait(0.2)
+	tp(VENDER_POS)
+	task.wait(0.5)
 	while dinheiro() > 0 and _G.AutoFarm and not fechado() do 
 		if seguro() or not _G.AutoFarm or fechado() then break end
 		Robbery:FireServer("Payment")
-		task.wait(0.1)
+		task.wait(1)
 	end
     
     if not _G.AutoFarm or fechado() then return end
@@ -1802,7 +1801,7 @@ local function farm()
     if rodando or not _G.AutoFarm then return end 
     
     if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
-        UpdateStatus("FALHA: Necessário R$" .. MIN_MONEY_REQUIRED .. " para comprar C4.")
+        UpdateStatus("Erro: Necessário $" .. MIN_MONEY_REQUIRED .. " para comprar C4.")
         rodando = false
         return
     end
