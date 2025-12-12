@@ -1599,7 +1599,7 @@ _G.AutoFarm = false
 
 local cfg = ...
 local ModoSeguro = (cfg and cfg.ModoSeguro) or false
-local RaioDeSeguranca = (cfg and cfg.RaioDeSeguranca) or 60
+local RaioDeSeguranca = (cfg and cfg.ModoSeguro) or 60
 
 local PS = game:GetService("Players")
 local WS = game:GetService("Workspace")
@@ -1629,7 +1629,11 @@ local FarmStatus
 local AFK_DISTANCE = 10
 local AFK_LEFT_POS = CollectPos - Vector3.new(AFK_DISTANCE, 0, 0)
 local AFK_RIGHT_POS = CollectPos + Vector3.new(AFK_DISTANCE, 0, 0)
-local AFK_SPEED = 0.05
+local AFK_SPEED = 0.02
+
+local Kaio = WS.Map.NPCS.Kaio
+local VENDER_POS = Kaio.HumanoidRootPart.Position - Vector3.new(3, 10, 0)
+
 
 -- Declarações antecipadas para funções que se chamam mutuamente
 local seguro
@@ -1655,7 +1659,6 @@ local function esperaDinamica(delayTime)
     
     local startTime = tick()
     
-    -- Usa as declarações antecipadas
     while aberto() and _G.AutoFarm and (tick() - startTime < delayTime) do
         
         if seguro() then 
@@ -1771,13 +1774,12 @@ local function tentarComprarC4()
 	return false
 end
 
-local VENDER_POS = Vector3.new(-742,-7,-536)
-
 local function vender()
 	UpdateStatus("Entregando...")
 	if seguro() or not _G.AutoFarm or fechado() then return end 
 
-	tp(VENDER_POS + Vector3.new(math.random(-3,3), math.random(-1,1), math.random(-3,3)))
+    -- Teleporta para o novo VENDER_POS (atrás do Kaio)
+	tp(VENDER_POS + Vector3.new(math.random(-1,1), math.random(-1,1), math.random(-1,1))) 
 	task.wait(0.2)
 	while dinheiro() > 0 and _G.AutoFarm and not fechado() do 
 		if seguro() or not _G.AutoFarm or fechado() then break end
@@ -1944,8 +1946,6 @@ plr.CharacterAdded:Connect(function()
 end)
 
 
-
-
 local Cash = TevezApenas:Tab({
     Title = "Autofarm",
     Icon = "lucide:wallet",
@@ -2006,7 +2006,7 @@ Cash:Toggle({
 Cash:Input({
     Title = "Raio de segurança",
     Desck = "Se alguém estiver dentro desse raio, interromperá o autofarm até que não haja ninguém nesse mesmo raio.",
-    Placeholder = "Ex: 60 (recomendado)",
+    Placeholder = "Ex: 100 (seguro)",
     Callback = function(v)
         if v == "" then return end
         local n = tonumber(v)
