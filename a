@@ -1,0 +1,155 @@
+-- === CORREÇÃO: VARIÁVEIS DE CONFIGURAÇÃO LOCAIS ===
+local SilentAim = true
+local Fov = 250
+local ShowFovCircle = true
+
+-- Funções auxiliares para simular o acesso a `getgenv()`
+local function getgenv()
+    return {
+        SilentAim = SilentAim,
+        Fov = Fov,
+        ShowFovCircle = ShowFovCircle,
+    }
+end
+
+-- === DEFINIÇÕES E VARIÁVEIS ESSENCIAIS ===
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+local currentTarget = nil
+local ClosestHitPart = nil 
+local FovCircle = Drawing.new("Circle")
+FovCircle.Thickness = 1
+FovCircle.Filled = false
+FovCircle.NumSides = 64
+
+-- === LOCALIZAÇÃO DO REMOTE E MÓDULO ===
+local GS = ReplicatedStorage:WaitForChild("GunSystem")
+local FireEvent = GS.Remotes.Events.Fire 
+local LocalFunctions = require(GS.Modules.LocalFunctions) 
+
+
+-- === FUNÇÕES DE DETECÇÃO DE ALVO ===
+local function getClosestPlayer()
+    local ClosestPart, DistanceToMouse
+    local viewportSize = Camera.ViewportSize
+    local centerScreen = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    
+    for _, Player in pairs(Players:GetPlayers()) do
+        if Player == LocalPlayer then continue end
+        if Player.Team == LocalPlayer.Team then continue end
+        local Character = Player.Character
+        if not Character then continue end
+        local Humanoid = Character:FindFirstChild("Humanoid")
+        if not Humanoid or Humanoid.Health <= 0 then continue end
+        
+        local TargetPart = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso") 
+        
+        if TargetPart then
+            local LocalPlayerCharacter = LocalPlayer.Character
+            if LocalPlayerCharacter then
+                local rayParams = RaycastParams.new()
+                rayParams.FilterDescendantsInstances = {LocalPlayerCharacter, Character}
+                rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+                local origin = Camera.CFrame.Position
+                local direction = (TargetPart.Position - origin)
+                local rayResult = Workspace:Raycast(origin, direction, rayParams)
+                if rayResult and not rayResult.Instance:IsDescendantOf(Character) then continue end
+            end
+            
+            local ScreenPosition, OnScreen = Camera:WorldToScreenPoint(TargetPart.Position)
+            if OnScreen then
+                local Distance = (centerScreen - Vector2.new(ScreenPosition.X, ScreenPosition.Y)).Magnitude
+                if Distance <= Fov and Distance < (DistanceToMouse or Fov + 1) then
+                    ClosestPart = TargetPart
+                    DistanceToMouse = Distance
+                end
+            end
+        end
+    end
+    return ClosestPart
+end
+
+-- === LOOP DE RENDERIZAÇÃO E ATUALIZAÇÃO DO ALVO ===
+RunService.RenderStepped:Connect(function()
+    if not ShowFovCircle then
+        FovCircle.Visible = false
+    else
+        FovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        FovCircle.Radius = Fov
+        FovCircle.Visible = true
+    end
+    
+    ClosestHitPart = getClosestPlayer()
+    currentTarget = ClosestHitPart and ClosestHitPart.Parent
+    
+    FovCircle.Color = currentTarget and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 255)
+end)
+
+
+-- === HOOK DA FUNÇÃO SHOOT DO MÓDULO (ESTRATÉGIA DE INJEÇÃO E SIMULAÇÃO) ===
+
+local originalShoot = LocalFunctions.Shoot 
+
+if hookfunction then
+    hookfunction(originalShoot, function(self, tool, hitPosition)
+        
+        -- Obtém os dados da arma do módulo (var30_upvw, var29_upvw)
+        local toolData = self._T[tool] 
+        
+        -- Se o Silent Aim está ativo E há um alvo
+        if SilentAim and ClosestHitPart and toolData and toolData.CanShoot then
+            
+            local targetPart = ClosestHitPart 
+            local targetCharacter = ClosestHitPart.Parent
+            local firePart = tool:FindFirstChild("FirePart") or tool:FindFirstChild("Handle") or tool.PrimaryPart
+            
+            if firePart and targetPart and targetCharacter then
+                
+                local direction = targetPart.Position - firePart.Position
+                
+                -- Realiza um Raycast para obter dados (Normal/Material)
+                local rp = RaycastParams.new()
+                rp.FilterType = Enum.RaycastFilterType.Exclude
+                rp.FilterDescendantsInstances = {LocalPlayer.Character, targetCharacter}
+                local result = Workspace:Raycast(firePart.Position, direction.Unit * direction.Magnitude, rp)
+                
+                local hitPos = targetPart.Position
+                local surfacePos = firePart.Position + direction
+
+                local info_table = {
+                    [surfacePos] = {
+                        Normal   = (result and result.Normal) or Vector3.new(0,1,0),
+                        Position = hitPos, 
+                        Instance = targetPart,
+                        Distance = direction.Magnitude,
+                        Material = (result and result.Material) or Enum.Material.SmoothPlastic
+                    }
+                }
+                
+                -- 1. INJETAR CHAMADA FIRESERVER (Silent Aim)
+                FireEvent:FireServer(tool, info_table, hitPos)
+                
+                -- 2. SIMULAR ESTADO (O que o script original faz para não quebrar o debounce e munição)
+                toolData.CanShoot = false
+                toolData.CurrentAmmo = toolData.CurrentAmmo - 1
+                
+                -- Se as funções UpdateUi e Shoot existirem no módulo:
+                if LocalFunctions.UpdateUi then
+                    LocalFunctions.UpdateUi(self, tool)
+                end
+                
+                -- Executa a lógica restante da função original (animações/efeitos locais)
+                return originalShoot(self, tool, hitPos)
+            end
+        end
+        
+        -- Se não há Silent Aim ou alvo, executa a função original normalmente
+        return originalShoot(self, tool, hitPosition)
+    end)
+end
