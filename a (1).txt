@@ -1595,7 +1595,6 @@ end
 -- =========================
 -- Autofarm LÓGICA
 -- =========================
-
 _G.AutoFarm = false
 
 local cfg = ...
@@ -1632,7 +1631,8 @@ local AFK_RIGHT_POS = CollectPos + Vector3.new(AFK_DISTANCE, 0, 0)
 local AFK_SPEED = 0.03
 
 local Kaio = WS.Map.NPCS.Kaio
-local VENDER_POS = Kaio.HumanoidRootPart.Position - Vector3.new(3, 10, 0)
+-- Simplificamos a VENDER_POS para garantir o teletransporte estável
+local VENDER_POS = Kaio.HumanoidRootPart.Position - Vector3.new(0, 10, 0) 
 
 
 -- Declarações antecipadas para funções que se chamam mutuamente
@@ -1763,7 +1763,8 @@ local function tentarComprarC4()
 	tp(BUY_POS)
 	task.wait(1)
 	BuyShop:FireServer("C4")
-	for i = 1, 40 do
+	-- Reduzido o número de loops para ser mais eficiente
+	for i = 1, 15 do
 		if item("C4") then
 			c4Comprada = true
 			return true
@@ -1773,19 +1774,34 @@ local function tentarComprarC4()
 	return false
 end
 
-local function vender()
+-- 🛠️ FUNÇÃO VENDER CORRIGIDA: Adicionamos 'forceSell' e ajustamos o loop e espera
+local function vender(forceSell)
 	UpdateStatus("Entregando...")
-	if seguro() or not _G.AutoFarm or fechado() then return end 
-
-	tp(VENDER_POS)
-	task.wait(0.5)
-	while dinheiro() > 0 and _G.AutoFarm and not fechado() do 
-		if seguro() or not _G.AutoFarm or fechado() then break end
+    
+    -- Se não for uma venda forçada (fechamento do banco), verifica segurança e status.
+	if not forceSell and (seguro() or fechado()) then return end 
+    if not _G.AutoFarm then return end
+    
+    -- Teleporta para a posição de venda (Kaio)
+	tp(VENDER_POS) 
+	task.wait(0.5) 
+    
+    -- Loop de venda
+	while dinheiro() > 0 and _G.AutoFarm do 
+        -- Mantemos a verificação de segurança
+		if seguro() then break end 
+        
+        -- Se não for venda forçada, para se o banco fechar durante a venda
+        if not forceSell and fechado() then break end 
+        
+        -- Chamada de rede
 		Robbery:FireServer("Payment")
-		task.wait(1)
+        
+        -- AUMENTAMOS O WAIT: Isso reduz o lag/flood de rede.
+		task.wait(1.5) 
 	end
     
-    if not _G.AutoFarm or fechado() then return end
+    if not _G.AutoFarm then return end
 
 	task.wait(0.5)
 	tp(CollectPos)
@@ -1905,6 +1921,7 @@ plr.CharacterAdded:Connect(function()
 	end)
 end)
 
+-- 🛠️ CORREÇÃO NO EVENTO DE FECHAMENTO: Removemos o wait longo e forçamos a venda
 status:GetPropertyChangedSignal("Text"):Connect(function()
 	if not _G.AutoFarm then 
         rodando = false 
@@ -1926,11 +1943,13 @@ status:GetPropertyChangedSignal("Text"):Connect(function()
 		ultimaVenda = agora
         
 		task.spawn(function()
-			task.wait(3)
+			-- task.wait(3) removido para reagir imediatamente ao fechamento
+			
 			if not _G.AutoFarm then return end
 			local d = dinheiro()
 			if d > 0 and _G.AutoFarm then 
-				vender()
+				-- Chama a venda passando 'true' para forçar a execução (forceSell)
+				vender(true) 
 			end
 		end)
         
