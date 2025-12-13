@@ -1268,7 +1268,7 @@ end
 
 
 -- =========================
--- PARKOUR (TAS) – MOVIMENTO FLUIDO ATÉ O INÍCIO
+-- PARKOUR (TAS) – START MANUAL (PLAYER REAL)
 -- =========================
 
 do
@@ -1277,7 +1277,6 @@ do
     local RunService = game:GetService("RunService")
     local Workspace = game:GetService("Workspace")
     local HttpService = game:GetService("HttpService")
-    local PathfindingService = game:GetService("PathfindingService")
 
     local LocalPlayer = Players.LocalPlayer
     local Camera = Workspace.CurrentCamera
@@ -1291,24 +1290,22 @@ do
     --// STATE
     local Recording = false
     local Playing = false
+    local WaitingForStart = false
     local Frames = {}
 
     local RecordConn, PlayConn
     local CurrentName, SelectedTAS
     local TASDropdown
+    local StartMarker = nil
 
     --// CHARACTER UTILS
-    local function getChar()
-        return LocalPlayer.Character
-    end
-
     local function getHRP()
-        local c = getChar()
+        local c = LocalPlayer.Character
         return c and c:FindFirstChild("HumanoidRootPart")
     end
 
     local function getHumanoid()
-        local c = getChar()
+        local c = LocalPlayer.Character
         return c and c:FindFirstChildOfClass("Humanoid")
     end
 
@@ -1367,92 +1364,113 @@ do
         Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
     end
 
-    --// MOVIMENTO FLUIDO ATÉ O INÍCIO
-    local function walkToStart(targetCF, callback)
-        local hrp = getHRP()
-        local hum = getHumanoid()
-        if not hrp or not hum then return end
+    --// START MARKER (BLOCO + SETA + TEXTO)
+    local function createStartMarker(cf)
+        if StartMarker then StartMarker:Destroy() end
 
-        hum.AutoRotate = true
+        local model = Instance.new("Model")
+        model.Name = "TAS_StartMarker"
+        model.Parent = Workspace
 
-        local path = PathfindingService:CreatePath({
-            AgentRadius = 2,
-            AgentHeight = 5,
-            AgentCanJump = true
-        })
+        -- bloco verde
+        local part = Instance.new("Part")
+        part.Size = Vector3.new(6, 1, 6)
+        part.Anchored = true
+        part.CanCollide = false
+        part.Transparency = 0.45
+        part.Color = Color3.fromRGB(0, 255, 0)
+        part.Material = Enum.Material.Neon
+        part.CFrame = cf
+        part.Parent = model
 
-        path:ComputeAsync(hrp.Position, targetCF.Position)
-        if path.Status ~= Enum.PathStatus.Success then
-            Notify("TAS", "Falha ao calcular caminho")
-            return
-        end
+        -- seta
+        local arrow = Instance.new("Part")
+        arrow.Size = Vector3.new(0.2, 2, 0.2)
+        arrow.Anchored = true
+        arrow.CanCollide = false
+        arrow.Color = Color3.fromRGB(0, 255, 0)
+        arrow.Material = Enum.Material.Neon
+        arrow.CFrame = cf * CFrame.new(0, 3, 0)
+        arrow.Parent = model
 
-        local waypoints = path:GetWaypoints()
-        local index = 1
+        local cone = Instance.new("SpecialMesh")
+        cone.MeshType = Enum.MeshType.Cone
+        cone.Parent = arrow
+
+        -- texto
+        local gui = Instance.new("BillboardGui")
+        gui.Size = UDim2.fromScale(6, 2)
+        gui.StudsOffset = Vector3.new(0, 5, 0)
+        gui.AlwaysOnTop = true
+        gui.Parent = part
+
+        local text = Instance.new("TextLabel")
+        text.Size = UDim2.fromScale(1, 1)
+        text.BackgroundTransparency = 1
+        text.Text = "Fique aqui!"
+        text.TextScaled = true
+        text.TextColor3 = Color3.fromRGB(0, 255, 0)
+        text.Font = Enum.Font.GothamBold
+        text.Parent = gui
+
+        StartMarker = model
+    end
+
+    --// WAIT PLAYER ENTER MARKER
+    local function waitForPlayerInMarker(startFrame)
+        if not startFrame then return end
+
+        WaitingForStart = true
+        createStartMarker(CFrame.new(unpack(startFrame.cf)))
+
+        Notify("TAS", "Vá até o marcador verde para iniciar")
+
         local conn
-
-        -- inicia o primeiro movimento
-        hum:MoveTo(waypoints[1].Position)
-
         conn = RunService.Heartbeat:Connect(function()
-            if not hum or not hrp then
+            local hrp = getHRP()
+            if not hrp or not StartMarker then return end
+
+            local part = StartMarker:FindFirstChildWhichIsA("Part")
+            if not part then return end
+
+            local dist = (hrp.Position - part.Position).Magnitude
+            if dist <= 3 then
                 conn:Disconnect()
-                return
-            end
+                WaitingForStart = false
+                StartMarker:Destroy()
+                StartMarker = nil
 
-            local wp = waypoints[index]
-            if not wp then
-                conn:Disconnect()
-                if callback then callback() end
-                return
-            end
+                -- iniciar replay
+                Playing = true
+                Notify("TAS", "Replay iniciado")
 
-            local dist = (hrp.Position - wp.Position).Magnitude
-
-            -- chegou perto o suficiente → próximo waypoint
-            if dist < 1.8 then
-                index += 1
-
-                local nextWp = waypoints[index]
-                if nextWp then
-                    if nextWp.Action == Enum.PathWaypointAction.Jump then
-                        hum.Jump = true
+                local i = 1
+                PlayConn = RunService.Heartbeat:Connect(function()
+                    if i > #Frames then
+                        PlayConn:Disconnect()
+                        PlayConn = nil
+                        Playing = false
+                        Notify("TAS", "Replay finalizado")
+                        return
                     end
-                    hum:MoveTo(nextWp.Position)
-                else
-                    conn:Disconnect()
-                    if callback then callback() end
-                end
+
+                    applyFrame(Frames[i])
+                    i += 1
+                end)
             end
         end)
     end
 
-    --// PLAYBACK
+    --// PLAY (MANUAL START)
     local function playTAS()
-        if Playing then return end
+        if Playing or WaitingForStart then return end
+
         if not Frames or #Frames == 0 then
             Notify("TAS", "Selecione ou grave um TAS primeiro")
             return
         end
 
-        walkToStart(CFrame.new(unpack(Frames[1].cf)), function()
-            Playing = true
-            Notify("TAS", "Replay iniciado")
-
-            local i = 1
-            PlayConn = RunService.Heartbeat:Connect(function()
-                if i > #Frames then
-                    PlayConn:Disconnect()
-                    PlayConn = nil
-                    Playing = false
-                    Notify("TAS", "Replay finalizado")
-                    return
-                end
-
-                applyFrame(Frames[i])
-                i += 1
-            end)
-        end)
+        waitForPlayerInMarker(Frames[1])
     end
 
     --// FILE UTILS
@@ -1553,7 +1571,7 @@ do
 
     local gravacao = TAS:Group()
     gravacao:Button({ Title = "Gravar", Callback = startRecording })
-    gravacao:Button({ Title = "Parar", Callback = stopRecording })
+    gravacao:Button({ Title = "Parar",  Callback = stopRecording })
 
     TAS:Button({ Title = "Salvar gravação", Callback = saveCurrentTAS })
 end
