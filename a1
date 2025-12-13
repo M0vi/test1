@@ -1293,43 +1293,44 @@ do
 
     local CurrentName
     local SelectedTAS
-    local TASDropdown
-    local PlayToggle
 
-    --// CHARACTER
+    --// UI REFS
+    local PlayToggle
+    local TASDropdown
+
+    --// CHARACTER UTILS
+    local function getChar()
+        return LocalPlayer.Character
+    end
+
     local function getHRP()
-        local c = LocalPlayer.Character
+        local c = getChar()
         return c and c:FindFirstChild("HumanoidRootPart")
     end
 
     local function getHumanoid()
-        local c = LocalPlayer.Character
+        local c = getChar()
         return c and c:FindFirstChildOfClass("Humanoid")
     end
 
-    --// FRAME
+    --// FRAME CAPTURE
     local function captureFrame()
         local hrp = getHRP()
-        local hum = getHumanoid()
-        if not hrp or not hum then return end
+        if not hrp then return end
 
         return {
             cf = { hrp.CFrame:GetComponents() },
-            cam = { Camera.CFrame:GetComponents() },
-            vel = { hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z },
-            jump = hum.Jump
+            cam = { Camera.CFrame:GetComponents() }
         }
     end
 
+    --// APPLY FRAME
     local function applyFrame(f)
         local hrp = getHRP()
-        local hum = getHumanoid()
-        if not hrp or not hum then return end
+        if not hrp then return end
 
         hrp.CFrame = CFrame.new(unpack(f.cf))
-        hrp.Velocity = Vector3.new(f.vel[1], f.vel[2], f.vel[3])
         Camera.CFrame = CFrame.new(unpack(f.cam))
-        hum.Jump = f.jump
     end
 
     --// RECORD
@@ -1365,16 +1366,16 @@ do
             PlayToggle:Unlock()
         end
 
-        Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
+        Notify("TAS", "Gravação encerrada (" .. #Frames .. " frames)")
     end
 
-    --// PATHFINDING
+    --// PATHFINDING TO START
     local function walkToStart(targetCF, callback)
         local hrp = getHRP()
         local hum = getHumanoid()
         if not hrp or not hum then return end
 
-        Notify("TAS", "Indo até o início")
+        Notify("TAS", "Indo até o ponto inicial")
 
         local path = PathfindingService:CreatePath({
             AgentRadius = 2,
@@ -1384,7 +1385,7 @@ do
 
         path:ComputeAsync(hrp.Position, targetCF.Position)
         if path.Status ~= Enum.PathStatus.Success then
-            Notify("TAS", "Falha no pathfinding")
+            Notify("TAS", "Falha no Pathfinding")
             return
         end
 
@@ -1393,30 +1394,47 @@ do
                 hum:MoveTo(wp.Position)
                 hum.MoveToFinished:Wait()
             end
-            if callback then callback() end
+
+            if callback then
+                callback()
+            end
         end)
     end
 
     --// PLAYBACK
-    local function playTAS()
-        if Playing or #Frames == 0 then return end
+    local function playFrames(data)
+        if Playing then return end
         Playing = true
+
+        local i = 1
+        PlayConn = RunService.Heartbeat:Connect(function()
+            if i > #data then
+                PlayConn:Disconnect()
+                PlayConn = nil
+                Playing = false
+                Notify("TAS", "Replay finalizado")
+                return
+            end
+
+            applyFrame(data[i])
+            i += 1
+        end)
+    end
+
+    local function playTAS()
+        if Recording then
+            Notify("TAS", "Pare a gravação antes de dar Play")
+            return
+        end
+
+        if not Frames or #Frames == 0 then
+            Notify("TAS", "Nenhuma gravação carregada")
+            return
+        end
 
         walkToStart(CFrame.new(unpack(Frames[1].cf)), function()
             Notify("TAS", "Replay iniciado")
-            local i = 1
-
-            PlayConn = RunService.Heartbeat:Connect(function()
-                if i > #Frames then
-                    PlayConn:Disconnect()
-                    PlayConn = nil
-                    Playing = false
-                    Notify("TAS", "Replay finalizado")
-                    return
-                end
-                applyFrame(Frames[i])
-                i += 1
-            end)
+            playFrames(Frames)
         end)
     end
 
@@ -1436,33 +1454,33 @@ do
         return out
     end
 
-    local function extractName(v)
-        return v and v:match("^(.-) %(")
-    end
-
     local function saveCurrentTAS()
-        if not CurrentName or CurrentName == "" or #Frames == 0 then
-            Notify("TAS", "Nome inválido ou gravação vazia")
+        if not CurrentName or CurrentName == "" then
+            Notify("TAS", "Defina um nome primeiro")
+            return
+        end
+
+        if #Frames == 0 then
+            Notify("TAS", "Nenhuma gravação para salvar")
             return
         end
 
         local duration = #Frames / 60
+        local path = TAS_FOLDER .. "/" .. CurrentName .. ".json"
 
-        writefile(
-            TAS_FOLDER .. "/" .. CurrentName .. ".json",
-            HttpService:JSONEncode({
-                Version = 1,
-                Duration = duration,
-                Frames = Frames
-            })
-        )
+        writefile(path, HttpService:JSONEncode({
+            Version = 1,
+            Duration = duration,
+            Frames = Frames
+        }))
 
         Notify("TAS", "Salvo: " .. CurrentName)
         TASDropdown:Refresh(getSavedTAS())
     end
 
-    local function loadTAS(v)
-        local name = extractName(v)
+    local function loadTAS(displayName)
+        if not displayName or displayName == "" then return end
+        local name = displayName:match("^(.-) %(")
         if not name then return end
 
         local path = TAS_FOLDER .. "/" .. name .. ".json"
@@ -1481,46 +1499,52 @@ do
             return
         end
 
-        delfile(TAS_FOLDER .. "/" .. SelectedTAS .. ".json")
-        Notify("TAS", "Deletado: " .. SelectedTAS)
-
-        SelectedTAS = nil
-        Frames = {}
-        TASDropdown:Refresh(getSavedTAS())
+        local path = TAS_FOLDER .. "/" .. SelectedTAS .. ".json"
+        if isfile(path) then
+            delfile(path)
+            Notify("TAS", "Gravação deletada: " .. SelectedTAS)
+            SelectedTAS = nil
+            Frames = {}
+            TASDropdown:Refresh(getSavedTAS())
+        end
     end
 
     --// UI
     local TAS = ElementsSection:Tab({
         Title = "Parkour (TAS)",
-        Icon = "lucide:video",
+        Icon = "lucide:keyboard",
         IconColor = Red
     })
 
     PlayToggle = TAS:Toggle({
         Title = "Play",
-        Desc = "Inicia o replay",
+        Desc = "Inicia o parkour.",
         Callback = function(v)
-            if v then playTAS() end
+            if v then
+                playTAS()
+            end
         end
     })
 
     TASDropdown = TAS:Dropdown({
         Title = "Selecionar gravação",
-        Desc = "Replay salvo",
+        Desc = "Gravação que será usada para dar play.",
         Values = getSavedTAS(),
         Value = "",
-        Callback = loadTAS
+        Callback = function(v)
+            loadTAS(v)
+        end
     })
 
     TAS:Button({
         Title = "Deletar gravação",
+        Desc = "Deleta a gravação selecionada.",
         Callback = deleteTAS
     })
 
-    TAS:Space()
-
     TAS:Input({
         Title = "Nome do TAS",
+        Desc = "Nome que será usado para salvar a gravação.",
         Placeholder = "Ex: Torre",
         Callback = function(v)
             if v ~= "" then
@@ -1530,20 +1554,16 @@ do
         end
     })
 
-    TAS:Space()
+    local gravacao = TAS:Group()
 
-    local g = TAS:Group()
-    g:Button({ Title = "Gravar", Callback = startRecording })
-    g:Button({ Title = "Parar", Callback = stopRecording })
-
-    TAS:Space()
+    gravacao:Button({ Title = "Gravar", Callback = startRecording })
+    gravacao:Button({ Title = "Parar", Callback = stopRecording })
 
     TAS:Button({
         Title = "Salvar gravação",
         Callback = saveCurrentTAS
     })
 end
-
 
 -- TUDO TEVEZ!!
 
