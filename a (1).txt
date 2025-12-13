@@ -991,9 +991,8 @@ local function numberToWords(num)
     return unicodeUpper(table.concat(parts, " e "))
 end
 
----------------------------------------------------------------------
--- AUTO JJ'S - CONFIGURAÇÕES E UI
----------------------------------------------------------------------
+
+-- AUTO JJ'S config e UI
 
 local running = false
 local startValue = 1
@@ -1262,6 +1261,246 @@ local Extras = Auto:Section({
         Desc  = "Conta de trás pra frente.",
         Callback = function(v)
             reverseEnabled = v
+        end
+    })
+end
+
+
+
+-- PARKOUR (TAS)
+
+do
+    --// SERVICES
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local HttpService = game:GetService("HttpService")
+
+    local LocalPlayer = Players.LocalPlayer
+    local Camera = Workspace.CurrentCamera
+
+    --// FOLDER
+    local TAS_FOLDER = "fp3_Parkours"
+
+    if writefile and not isfolder(TAS_FOLDER) then
+        makefolder(TAS_FOLDER)
+    end
+
+    --// TAS STATE
+    local Recording = false
+    local Playing = false
+    local Frames = {}
+    local RecordConn
+    local PlayConn
+
+    local CurrentName = nil
+    local SelectedTAS = nil
+
+    --// CHARACTER UTILS
+    local function getHRP()
+        local c = LocalPlayer.Character
+        return c and c:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function getHumanoid()
+        local c = LocalPlayer.Character
+        return c and c:FindFirstChildOfClass("Humanoid")
+    end
+
+    --// FRAME CAPTURE
+    local function captureFrame()
+        local hrp = getHRP()
+        local hum = getHumanoid()
+        if not hrp or not hum then return end
+
+        return {
+            cf = {hrp.CFrame:GetComponents()},
+            cam = {Camera.CFrame:GetComponents()},
+            vel = {hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z},
+            jump = hum.Jump
+        }
+    end
+
+    --// APPLY FRAME
+    local function applyFrame(f)
+        local hrp = getHRP()
+        local hum = getHumanoid()
+        if not hrp or not hum then return end
+
+        hrp.CFrame = CFrame.new(unpack(f.cf))
+        hrp.Velocity = Vector3.new(f.vel[1], f.vel[2], f.vel[3])
+        Camera.CFrame = CFrame.new(unpack(f.cam))
+        hum.Jump = f.jump
+    end
+
+    --// RECORD
+    local function startRecording()
+        if Recording then return end
+        Frames = {}
+        Recording = true
+
+        RecordConn = RunService.Heartbeat:Connect(function()
+            local frame = captureFrame()
+            if frame then
+                table.insert(Frames, frame)
+            end
+        end)
+
+        Notify("TAS", "Gravação iniciada")
+    end
+
+    local function stopRecording()
+        if not Recording then return end
+        Recording = false
+        if RecordConn then RecordConn:Disconnect() end
+        RecordConn = nil
+
+        Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
+    end
+
+    --// PLAYBACK
+    local function playTAS(data)
+        if Playing or not data or #data == 0 then return end
+        Playing = true
+
+        local hrp = getHRP()
+        if not hrp then return end
+
+        hrp.CFrame = CFrame.new(unpack(data[1].cf))
+        local index = 1
+
+        PlayConn = RunService.Heartbeat:Connect(function()
+            if index > #data then
+                PlayConn:Disconnect()
+                PlayConn = nil
+                Playing = false
+                Notify("TAS", "Replay finalizado")
+                return
+            end
+
+            applyFrame(data[index])
+            index += 1
+        end)
+
+        Notify("TAS", "Replay iniciado")
+    end
+
+    --// FILE UTILS
+    local function getSavedTAS()
+        local files = {}
+        if listfiles then
+            for _, file in ipairs(listfiles(TAS_FOLDER)) do
+                if file:sub(-5) == ".json" then
+                    table.insert(files, file:match("([^/]+)%.json$"))
+                end
+            end
+        end
+        return files
+    end
+
+    local function saveCurrentTAS()
+        if not CurrentName or CurrentName == "" then
+            Notify("TAS", "Defina um nome primeiro")
+            return
+        end
+
+        if #Frames == 0 then
+            Notify("TAS", "Nenhuma gravação para salvar")
+            return
+        end
+
+        local path = TAS_FOLDER .. "/" .. CurrentName .. ".json"
+
+        writefile(path, HttpService:JSONEncode({
+            Version = 1,
+            Frames = Frames
+        }))
+
+        Notify("TAS", "Salvo em " .. path)
+
+        TASDropdown:Refresh(getSavedTAS())
+    end
+
+    local function loadTAS(name)
+        local path = TAS_FOLDER .. "/" .. name .. ".json"
+        if not isfile(path) then
+            Notify("TAS", "Arquivo não encontrado")
+            return
+        end
+
+        local data = HttpService:JSONDecode(readfile(path))
+        Frames = data.Frames or {}
+
+        Notify("TAS", "TAS carregado: " .. name)
+    end
+
+    --// UI
+    local TAS = ElementsSection:Tab({
+        Title = "Parkour (TAS)",
+        Icon = "lucide:keyboard",
+        IconColor = Red
+    })
+
+    TAS:Toggle({
+        Title = "Play",
+        Desc = "Inicia o parkour.",
+        Callback = function(v)
+            if v then
+                if SelectedTAS then
+                    playTAS(Frames)
+                else
+                    Notify("TAS", "Selecione uma gravação")
+                end
+            end
+        end
+    })
+
+    TASDropdown = TAS:Dropdown({
+        Title = "Selecionar gravação",
+        Desc = "Gravação que será usada para dar play.",
+        Values = getSavedTAS(),
+        Value = "",
+        Callback = function(v)
+            SelectedTAS = v
+            loadTAS(v)
+        end
+    })
+
+    TAS:Space()
+
+    TAS:Input({
+        Title = "Nome do TAS",
+        Desc = "Nome que será usado para salvar a gravação.",
+        Placeholder = "Ex: Torre",
+        Callback = function(v)
+            if v == "" then return end
+            CurrentName = v
+            Notify("TAS", "Nome definido: " .. v)
+        end
+    })
+
+    local gravacao1 = TAS:Group()
+
+    gravacao1:Button({
+        Title = "Gravar",
+        Callback = function()
+            startRecording()
+        end
+    })
+
+    gravacao1:Space()
+
+    gravacao1:Button({
+        Title = "Parar",
+        Callback = function()
+            stopRecording()
+        end
+    })
+
+    TAS:Button({
+        Title = "Salvar gravação",
+        Callback = function()
+            saveCurrentTAS()
         end
     })
 end
