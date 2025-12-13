@@ -157,11 +157,9 @@ do
 
     AboutTab:Section({
         Title = [[
-- Script tornou-se universal! (Qualquer jogo)
-- Autofarm implementado. (1.3K money para iniciar)
-- Bug fixes: hitbox expander, ESP e notificações ao iniciar o script.
-- ESP refeito
-- UI mais compacta e elegante.
+- Implementação do gravador de parkour (mais info no Discord)!
+- otimizações e bug fixes no autofarm [TEVEZ]
+]]
 
 Desenvolvido e mantido por @fp3, em LuaU. Isso é apenas um hobby.]],
         TextSize = 18,
@@ -1491,11 +1489,12 @@ do
         TASDropdown:Refresh(getSavedTAS())
     end
 
-    --// UI
+
+    --// PARKOUR UI
     local TAS = ElementsSection:Tab({
         Title = "Parkour (TAS)",
-        Icon = "lucide:keyboard",
-        IconColor = Red
+        Icon = "lucide:video",
+        IconColor = Color3.fromHex("#FF7A21")
     })
 
     PlayToggle = TAS:Toggle({
