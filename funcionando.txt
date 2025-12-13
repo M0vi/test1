@@ -1270,7 +1270,7 @@ end
 -- PARKOUR (TAS)
 
 -- =========================
--- PARKOUR (TAS) - CORRIGIDO
+-- PARKOUR (TAS) – COMPLETO + INÍCIO SUAVE
 -- =========================
 
 do
@@ -1339,6 +1339,35 @@ do
         hum.Jump = f.jump
     end
 
+    --// SMOOTH ALIGN (INÍCIO HUMANO)
+    local function smoothAlign(frame, duration)
+        duration = duration or 0.45
+
+        local hrp = getHRP()
+        if not hrp then return end
+
+        local startCF = hrp.CFrame
+        local startCam = Camera.CFrame
+
+        local targetCF = CFrame.new(unpack(frame.cf))
+        local targetCam = CFrame.new(unpack(frame.cam))
+
+        local t0 = tick()
+        local conn
+
+        conn = RunService.Heartbeat:Connect(function()
+            local alpha = math.clamp((tick() - t0) / duration, 0, 1)
+
+            -- Lerp realista
+            hrp.CFrame = startCF:Lerp(targetCF, alpha)
+            Camera.CFrame = startCam:Lerp(targetCam, alpha)
+
+            if alpha >= 1 then
+                conn:Disconnect()
+            end
+        end)
+    end
+
     --// RECORD
     local function startRecording()
         if Recording then return end
@@ -1374,6 +1403,8 @@ do
         local hum = getHumanoid()
         if not hrp or not hum then return end
 
+        Notify("TAS", "Indo até o ponto inicial")
+
         local path = PathfindingService:CreatePath({
             AgentRadius = 2,
             AgentHeight = 5,
@@ -1382,7 +1413,7 @@ do
 
         path:ComputeAsync(hrp.Position, targetCF.Position)
         if path.Status ~= Enum.PathStatus.Success then
-            Notify("TAS", "Falha ao ir para o ponto inicial")
+            Notify("TAS", "Falha ao chegar no início")
             return
         end
 
@@ -1395,7 +1426,7 @@ do
         end)
     end
 
-    --// PLAYBACK
+    --// PLAYBACK (COM INÍCIO SUAVE)
     local function playTAS()
         if Playing then return end
 
@@ -1405,6 +1436,11 @@ do
         end
 
         walkToStart(CFrame.new(unpack(Frames[1].cf)), function()
+
+            -- 🔹 Ajuste humano (olhar + alinhar corpo)
+            smoothAlign(Frames[1], 0.45)
+            task.wait(0.45 + math.random(6,12)/100) -- micro delay humano
+
             Playing = true
             Notify("TAS", "Replay iniciado")
 
@@ -1439,7 +1475,7 @@ do
 
     local function saveCurrentTAS()
         if not CurrentName or CurrentName == "" then
-            Notify("TAS", "Defina um nome para o TAS")
+            Notify("TAS", "Defina um nome")
             return
         end
 
@@ -1450,13 +1486,10 @@ do
 
         writefile(
             TAS_FOLDER .. "/" .. CurrentName .. ".json",
-            HttpService:JSONEncode({
-                Version = 1,
-                Frames = Frames
-            })
+            HttpService:JSONEncode({ Version = 1, Frames = Frames })
         )
 
-        Notify("TAS", "Gravação salva: " .. CurrentName)
+        Notify("TAS", "Salvo: " .. CurrentName)
         TASDropdown:Refresh(getSavedTAS())
     end
 
@@ -1468,27 +1501,21 @@ do
         end
 
         local path = TAS_FOLDER .. "/" .. name .. ".json"
-        if not isfile(path) then
-            return
-        end
+        if not isfile(path) then return end
 
-        local data = HttpService:JSONDecode(readfile(path))
-        Frames = data.Frames or {}
+        Frames = HttpService:JSONDecode(readfile(path)).Frames or {}
         SelectedTAS = name
-
         Notify("TAS", "Selecionado: " .. name)
     end
 
     local function deleteTAS()
         if not SelectedTAS or SelectedTAS == "" then
-            Notify("TAS", "Selecione uma gravação para deletar")
+            Notify("TAS", "Selecione uma gravação")
             return
         end
 
         local path = TAS_FOLDER .. "/" .. SelectedTAS .. ".json"
-        if isfile(path) then
-            delfile(path)
-        end
+        if isfile(path) then delfile(path) end
 
         SelectedTAS = nil
         Frames = {}
@@ -1508,7 +1535,7 @@ do
 
     TAS:Toggle({
         Title = "Play",
-        Desc = "Executa o parkour gravado",
+        Desc = "Executa o TAS",
         Callback = function(v)
             if v then playTAS() end
         end
@@ -1516,7 +1543,6 @@ do
 
     TASDropdown = TAS:Dropdown({
         Title = "Selecionar gravação",
-        Desc = "TAS salvo",
         Values = getSavedTAS(),
         Value = "",
         Callback = function(v)
@@ -1526,7 +1552,6 @@ do
 
     TAS:Button({
         Title = "Deletar gravação",
-        Desc = "Remove o TAS selecionado",
         Callback = deleteTAS
     })
 
