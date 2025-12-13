@@ -1489,12 +1489,11 @@ do
         TASDropdown:Refresh(getSavedTAS())
     end
 
-
-    --// PARKOUR UI
+    --// UI
     local TAS = ElementsSection:Tab({
         Title = "Parkour (TAS)",
         Icon = "lucide:video",
-        IconColor = Color3.fromHex("#FF7A21")
+        IconColor = Red
     })
 
     PlayToggle = TAS:Toggle({
