@@ -1267,9 +1267,8 @@ end
 
 
 
--- PARKOUR (TAS)
 -- =========================
--- PARKOUR (TAS) – SEM ALINHAMENTO DE CÂMERA
+-- PARKOUR (TAS) – MOVIMENTO FLUIDO ATÉ O INÍCIO
 -- =========================
 
 do
@@ -1299,13 +1298,17 @@ do
     local TASDropdown
 
     --// CHARACTER UTILS
+    local function getChar()
+        return LocalPlayer.Character
+    end
+
     local function getHRP()
-        local c = LocalPlayer.Character
+        local c = getChar()
         return c and c:FindFirstChild("HumanoidRootPart")
     end
 
     local function getHumanoid()
-        local c = LocalPlayer.Character
+        local c = getChar()
         return c and c:FindFirstChildOfClass("Humanoid")
     end
 
@@ -1331,10 +1334,7 @@ do
 
         hrp.CFrame = CFrame.new(unpack(f.cf))
         hrp.Velocity = Vector3.new(f.vel[1], f.vel[2], f.vel[3])
-
-        -- câmera passa a ser aplicada normalmente a partir do replay
         Camera.CFrame = CFrame.new(unpack(f.cam))
-
         hum.Jump = f.jump
     end
 
@@ -1367,11 +1367,13 @@ do
         Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
     end
 
-    --// PATHFINDING TO START (SÓ POSIÇÃO)
+    --// MOVIMENTO FLUIDO ATÉ O INÍCIO
     local function walkToStart(targetCF, callback)
         local hrp = getHRP()
         local hum = getHumanoid()
         if not hrp or not hum then return end
+
+        hum.AutoRotate = true
 
         local path = PathfindingService:CreatePath({
             AgentRadius = 2,
@@ -1381,23 +1383,53 @@ do
 
         path:ComputeAsync(hrp.Position, targetCF.Position)
         if path.Status ~= Enum.PathStatus.Success then
-            Notify("TAS", "Falha ao ir para o início")
+            Notify("TAS", "Falha ao calcular caminho")
             return
         end
 
-        task.spawn(function()
-            for _, wp in ipairs(path:GetWaypoints()) do
-                hum:MoveTo(wp.Position)
-                hum.MoveToFinished:Wait()
+        local waypoints = path:GetWaypoints()
+        local index = 1
+        local conn
+
+        -- inicia o primeiro movimento
+        hum:MoveTo(waypoints[1].Position)
+
+        conn = RunService.Heartbeat:Connect(function()
+            if not hum or not hrp then
+                conn:Disconnect()
+                return
             end
-            if callback then callback() end
+
+            local wp = waypoints[index]
+            if not wp then
+                conn:Disconnect()
+                if callback then callback() end
+                return
+            end
+
+            local dist = (hrp.Position - wp.Position).Magnitude
+
+            -- chegou perto o suficiente → próximo waypoint
+            if dist < 1.8 then
+                index += 1
+
+                local nextWp = waypoints[index]
+                if nextWp then
+                    if nextWp.Action == Enum.PathWaypointAction.Jump then
+                        hum.Jump = true
+                    end
+                    hum:MoveTo(nextWp.Position)
+                else
+                    conn:Disconnect()
+                    if callback then callback() end
+                end
+            end
         end)
     end
 
-    --// PLAYBACK (INÍCIO NEUTRO)
+    --// PLAYBACK
     local function playTAS()
         if Playing then return end
-
         if not Frames or #Frames == 0 then
             Notify("TAS", "Selecione ou grave um TAS primeiro")
             return
@@ -1441,7 +1473,6 @@ do
             Notify("TAS", "Defina um nome")
             return
         end
-
         if #Frames == 0 then
             Notify("TAS", "Nada para salvar")
             return
@@ -1468,8 +1499,6 @@ do
 
         Frames = HttpService:JSONDecode(readfile(path)).Frames or {}
         SelectedTAS = name
-
-        Notify("TAS", "Selecionado: " .. name)
     end
 
     local function deleteTAS()
@@ -1483,7 +1512,6 @@ do
 
         SelectedTAS = nil
         Frames = {}
-
         TASDropdown:Set("")
         TASDropdown:Refresh(getSavedTAS())
 
@@ -1513,35 +1541,21 @@ do
         end
     })
 
-    TAS:Button({
-        Title = "Deletar gravação",
-        Callback = deleteTAS
-    })
-
-    TAS:Space()
+    TAS:Button({ Title = "Deletar gravação", Callback = deleteTAS })
 
     TAS:Input({
         Title = "Nome do TAS",
         Placeholder = "Ex: Torre",
         Callback = function(v)
-            if v ~= "" then
-                CurrentName = v
-            end
+            if v ~= "" then CurrentName = v end
         end
     })
 
-    TAS:Space()
-
     local gravacao = TAS:Group()
     gravacao:Button({ Title = "Gravar", Callback = startRecording })
-    gravacao:Button({ Title = "Parar",  Callback = stopRecording })
+    gravacao:Button({ Title = "Parar", Callback = stopRecording })
 
-    TAS:Space()
-
-    TAS:Button({
-        Title = "Salvar gravação",
-        Callback = saveCurrentTAS
-    })
+    TAS:Button({ Title = "Salvar gravação", Callback = saveCurrentTAS })
 end
 
 -- TUDO TEVEZ!!
