@@ -1268,9 +1268,8 @@ end
 
 
 -- PARKOUR (TAS)
-
 -- =========================
--- PARKOUR (TAS) – CAMERA ONLY ALIGN (SHIFTLOCK)
+-- PARKOUR (TAS) – SEM ALINHAMENTO DE CÂMERA
 -- =========================
 
 do
@@ -1317,14 +1316,14 @@ do
         if not hrp or not hum then return end
 
         return {
-            cf  = { hrp.CFrame:GetComponents() }, -- usado só no replay
+            cf  = { hrp.CFrame:GetComponents() },
             cam = { Camera.CFrame:GetComponents() },
             vel = { hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z },
             jump = hum.Jump
         }
     end
 
-    --// APPLY FRAME (REPLAY REAL)
+    --// APPLY FRAME
     local function applyFrame(f)
         local hrp = getHRP()
         local hum = getHumanoid()
@@ -1332,32 +1331,11 @@ do
 
         hrp.CFrame = CFrame.new(unpack(f.cf))
         hrp.Velocity = Vector3.new(f.vel[1], f.vel[2], f.vel[3])
+
+        -- câmera passa a ser aplicada normalmente a partir do replay
         Camera.CFrame = CFrame.new(unpack(f.cam))
+
         hum.Jump = f.jump
-    end
-
-    --// CAMERA-ONLY ALIGN (SHIFTLOCK STYLE)
-    local function smoothCameraAlign(frame, duration)
-        duration = duration or 0.35
-
-        local startCam = Camera.CFrame
-        local targetCam = CFrame.new(unpack(frame.cam))
-
-        local t0 = tick()
-        local conn
-
-        conn = RunService.RenderStepped:Connect(function()
-            local alpha = math.clamp((tick() - t0) / duration, 0, 1)
-
-            -- curva levemente humana
-            alpha = alpha ^ 1.15
-
-            Camera.CFrame = startCam:Lerp(targetCam, alpha)
-
-            if alpha >= 1 then
-                conn:Disconnect()
-            end
-        end)
     end
 
     --// RECORD
@@ -1389,7 +1367,7 @@ do
         Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
     end
 
-    --// PATHFINDING TO START (NÃO MEXE NA CÂMERA)
+    --// PATHFINDING TO START (SÓ POSIÇÃO)
     local function walkToStart(targetCF, callback)
         local hrp = getHRP()
         local hum = getHumanoid()
@@ -1416,7 +1394,7 @@ do
         end)
     end
 
-    --// PLAYBACK (INÍCIO NATURAL)
+    --// PLAYBACK (INÍCIO NEUTRO)
     local function playTAS()
         if Playing then return end
 
@@ -1426,11 +1404,6 @@ do
         end
 
         walkToStart(CFrame.new(unpack(Frames[1].cf)), function()
-
-            -- 🔹 Só câmera, estilo mouse humano
-            smoothCameraAlign(Frames[1], 0.35)
-            task.wait(0.35 + math.random(6,12)/100)
-
             Playing = true
             Notify("TAS", "Replay iniciado")
 
