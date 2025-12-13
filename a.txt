@@ -1295,8 +1295,10 @@ do
 
     local CurrentName
     local SelectedTAS
+    local TASDropdown
+    local PlayToggle
 
-    --// CHARACTER UTILS
+    --// CHARACTER
     local function getHRP()
         local c = LocalPlayer.Character
         return c and c:FindFirstChild("HumanoidRootPart")
@@ -1307,21 +1309,20 @@ do
         return c and c:FindFirstChildOfClass("Humanoid")
     end
 
-    --// FRAME CAPTURE
+    --// FRAME
     local function captureFrame()
         local hrp = getHRP()
         local hum = getHumanoid()
         if not hrp or not hum then return end
 
         return {
-            cf = {hrp.CFrame:GetComponents()},
-            cam = {Camera.CFrame:GetComponents()},
-            vel = {hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z},
+            cf = { hrp.CFrame:GetComponents() },
+            cam = { Camera.CFrame:GetComponents() },
+            vel = { hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z },
             jump = hum.Jump
         }
     end
 
-    --// APPLY FRAME
     local function applyFrame(f)
         local hrp = getHRP()
         local hum = getHumanoid()
@@ -1336,8 +1337,12 @@ do
     --// RECORD
     local function startRecording()
         if Recording then return end
-        Frames = {}
         Recording = true
+        Frames = {}
+
+        if PlayToggle then
+            PlayToggle:Lock()
+        end
 
         RecordConn = RunService.Heartbeat:Connect(function()
             local frame = captureFrame()
@@ -1352,19 +1357,26 @@ do
     local function stopRecording()
         if not Recording then return end
         Recording = false
-        if RecordConn then RecordConn:Disconnect() end
-        RecordConn = nil
+
+        if RecordConn then
+            RecordConn:Disconnect()
+            RecordConn = nil
+        end
+
+        if PlayToggle then
+            PlayToggle:Unlock()
+        end
 
         Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
     end
 
-    --// PATHFINDING TO START
+    --// PATHFINDING
     local function walkToStart(targetCF, callback)
         local hrp = getHRP()
         local hum = getHumanoid()
         if not hrp or not hum then return end
 
-        Notify("TAS", "Indo até o ponto inicial")
+        Notify("TAS", "Indo até o início")
 
         local path = PathfindingService:CreatePath({
             AgentRadius = 2,
@@ -1389,15 +1401,10 @@ do
 
     --// PLAYBACK
     local function playTAS()
-        if not Frames or #Frames == 0 then
-            Notify("TAS", "Nenhuma gravação carregada")
-            return
-        end
+        if Playing or #Frames == 0 then return end
+        Playing = true
 
         walkToStart(CFrame.new(unpack(Frames[1].cf)), function()
-            if Playing then return end
-            Playing = true
-
             Notify("TAS", "Replay iniciado")
             local i = 1
 
@@ -1421,41 +1428,52 @@ do
         if listfiles then
             for _, file in ipairs(listfiles(TAS_FOLDER)) do
                 if file:sub(-5) == ".json" then
-                    out[#out + 1] = file:match("([^/]+)%.json$")
+                    local name = file:match("([^/]+)%.json$")
+                    local data = HttpService:JSONDecode(readfile(file))
+                    local dur = data.Duration or 0
+                    out[#out + 1] = string.format("%s (%.2fs)", name, dur)
                 end
             end
         end
         return out
     end
 
+    local function extractName(v)
+        return v and v:match("^(.-) %(")
+    end
+
     local function saveCurrentTAS()
-        if not CurrentName or CurrentName == "" then
-            Notify("TAS", "Defina um nome primeiro")
-            return
-        end
-        if #Frames == 0 then
-            Notify("TAS", "Nenhuma gravação para salvar")
+        if not CurrentName or CurrentName == "" or #Frames == 0 then
+            Notify("TAS", "Nome inválido ou gravação vazia")
             return
         end
 
+        local duration = #Frames / 60
+
         writefile(
             TAS_FOLDER .. "/" .. CurrentName .. ".json",
-            HttpService:JSONEncode({ Version = 1, Frames = Frames })
+            HttpService:JSONEncode({
+                Version = 1,
+                Duration = duration,
+                Frames = Frames
+            })
         )
 
         Notify("TAS", "Salvo: " .. CurrentName)
         TASDropdown:Refresh(getSavedTAS())
     end
 
-    local function loadTAS(name)
-        local path = TAS_FOLDER .. "/" .. name .. ".json"
-        if not isfile(path) then
-            Notify("TAS", "Arquivo não encontrado")
-            return
-        end
+    local function loadTAS(v)
+        local name = extractName(v)
+        if not name then return end
 
-        Frames = HttpService:JSONDecode(readfile(path)).Frames or {}
+        local path = TAS_FOLDER .. "/" .. name .. ".json"
+        if not isfile(path) then return end
+
+        local data = HttpService:JSONDecode(readfile(path))
+        Frames = data.Frames or {}
         SelectedTAS = name
+
         Notify("TAS", "Selecionado: " .. name)
     end
 
@@ -1465,14 +1483,12 @@ do
             return
         end
 
-        local path = TAS_FOLDER .. "/" .. SelectedTAS .. ".json"
-        if isfile(path) then
-            delfile(path)
-            Notify("TAS", "Deletado: " .. SelectedTAS)
-            SelectedTAS = nil
-            Frames = {}
-            TASDropdown:Refresh(getSavedTAS())
-        end
+        delfile(TAS_FOLDER .. "/" .. SelectedTAS .. ".json")
+        Notify("TAS", "Deletado: " .. SelectedTAS)
+
+        SelectedTAS = nil
+        Frames = {}
+        TASDropdown:Refresh(getSavedTAS())
     end
 
     --// UI
@@ -1482,9 +1498,9 @@ do
         IconColor = Red
     })
 
-    TAS:Toggle({
+    PlayToggle = TAS:Toggle({
         Title = "Play",
-        Desc = "Inicia o parkour.",
+        Desc = "Inicia o replay",
         Callback = function(v)
             if v then playTAS() end
         end
@@ -1492,17 +1508,14 @@ do
 
     TASDropdown = TAS:Dropdown({
         Title = "Selecionar gravação",
-        Desc = "Gravação que será usada para dar play.",
+        Desc = "Replay salvo",
         Values = getSavedTAS(),
         Value = "",
-        Callback = function(v)
-            loadTAS(v)
-        end
+        Callback = loadTAS
     })
 
     TAS:Button({
         Title = "Deletar gravação",
-        Desc = "Deleta a gravação selecionada.",
         Callback = deleteTAS
     })
 
@@ -1510,7 +1523,6 @@ do
 
     TAS:Input({
         Title = "Nome do TAS",
-        Desc = "Nome que será usado para salvar a gravação.",
         Placeholder = "Ex: Torre",
         Callback = function(v)
             if v ~= "" then
@@ -1522,10 +1534,9 @@ do
 
     TAS:Space()
 
-    local gravacao = TAS:Group()
-
-    gravacao:Button({ Title = "Gravar", Callback = startRecording })
-    gravacao:Button({ Title = "Parar", Callback = stopRecording })
+    local g = TAS:Group()
+    g:Button({ Title = "Gravar", Callback = startRecording })
+    g:Button({ Title = "Parar", Callback = stopRecording })
 
     TAS:Space()
 
@@ -1534,7 +1545,6 @@ do
         Callback = saveCurrentTAS
     })
 end
-
 
 
 -- TUDO TEVEZ!!
