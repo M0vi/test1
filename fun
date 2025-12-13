@@ -1277,9 +1277,15 @@ do
     local LocalPlayer = Players.LocalPlayer
     local Camera = Workspace.CurrentCamera
 
+    --// FILESYSTEM CHECK
+    local FS_OK = writefile and readfile and isfile and delfile and listfiles
+    if not FS_OK then
+        Notify("TAS", "Executor não suporta sistema de arquivos")
+    end
+
     --// FOLDER
     local TAS_FOLDER = "fp3_Parkours"
-    if writefile and not isfolder(TAS_FOLDER) then
+    if FS_OK and not isfolder(TAS_FOLDER) then
         makefolder(TAS_FOLDER)
     end
 
@@ -1350,19 +1356,22 @@ do
     local function stopRecording()
         if not Recording then return end
         Recording = false
-        if RecordConn then RecordConn:Disconnect() end
-        RecordConn = nil
+
+        if RecordConn then
+            RecordConn:Disconnect()
+            RecordConn = nil
+        end
 
         Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
     end
 
-    --// PATHFINDING TO START
+    --// PATHFINDING
     local function walkToStart(targetCF, callback)
         local hrp = getHRP()
         local hum = getHumanoid()
         if not hrp or not hum then return end
 
-        Notify("TAS", "Indo até o ponto inicial")
+        Notify("TAS", "Indo até o início")
 
         local path = PathfindingService:CreatePath({
             AgentRadius = 2,
@@ -1387,7 +1396,8 @@ do
 
     --// PLAYBACK
     local function playTAS()
-        if Playing or #Frames == 0 then
+        if Playing then return end
+        if #Frames == 0 then
             Notify("TAS", "Nenhuma gravação carregada")
             return
         end
@@ -1414,17 +1424,27 @@ do
     --// FILE UTILS
     local function getSavedTAS()
         local out = {}
-        if listfiles then
-            for _, file in ipairs(listfiles(TAS_FOLDER)) do
-                if file:sub(-5) == ".json" then
-                    out[#out + 1] = file:match("([^/]+)%.json$")
-                end
+        if not FS_OK then return out end
+
+        for _, file in ipairs(listfiles(TAS_FOLDER)) do
+            if file:sub(-5) == ".json" then
+                local name = file:match("([^/]+)%.json$")
+                local ok, data = pcall(function()
+                    return HttpService:JSONDecode(readfile(file))
+                end)
+                local duration = ok and data.Duration or 0
+                out[#out + 1] = string.format("%s (%.2fs)", name, duration)
             end
         end
         return out
     end
 
+    local function extractName(v)
+        return v and v:match("^(.-) %(")
+    end
+
     local function saveCurrentTAS()
+        if not FS_OK then return end
         if not CurrentName or CurrentName == "" then
             Notify("TAS", "Defina um nome primeiro")
             return
@@ -1436,16 +1456,26 @@ do
 
         writefile(
             TAS_FOLDER .. "/" .. CurrentName .. ".json",
-            HttpService:JSONEncode({ Version = 1, Frames = Frames })
+            HttpService:JSONEncode({
+                Version = 1,
+                Duration = #Frames / 60,
+                Frames = Frames
+            })
         )
 
         Notify("TAS", "Gravação salva: " .. CurrentName)
-        TASDropdown:Refresh(getSavedTAS())
+
+        if TASDropdown then
+            TASDropdown:Refresh({
+                Values = getSavedTAS()
+            })
+        end
     end
 
-    local function loadTAS(name)
-        -- 🔒 bloqueia chamadas automáticas inválidas
-        if not name or name == "" then return end
+    local function loadTAS(v)
+        if not v or v == "" or not FS_OK then return end
+        local name = extractName(v)
+        if not name then return end
 
         local path = TAS_FOLDER .. "/" .. name .. ".json"
         if not isfile(path) then return end
@@ -1458,20 +1488,21 @@ do
     end
 
     local function deleteTAS()
-        if not SelectedTAS then
+        if not SelectedTAS or not FS_OK then
             Notify("TAS", "Nenhuma gravação selecionada")
             return
         end
 
-        local path = TAS_FOLDER .. "/" .. SelectedTAS .. ".json"
-        if isfile(path) then
-            delfile(path)
-            Notify("TAS", "Gravação deletada: " .. SelectedTAS)
+        delfile(TAS_FOLDER .. "/" .. SelectedTAS .. ".json")
+        Notify("TAS", "Gravação deletada: " .. SelectedTAS)
 
-            SelectedTAS = nil
-            Frames = {}
+        SelectedTAS = nil
+        Frames = {}
 
-            TASDropdown:Refresh(getSavedTAS())
+        if TASDropdown then
+            TASDropdown:Refresh({
+                Values = getSavedTAS()
+            })
         end
     end
 
@@ -1496,7 +1527,6 @@ do
         Values = getSavedTAS(),
         Value = "",
         Callback = function(v)
-            if not v or v == "" then return end
             loadTAS(v)
         end
     })
@@ -1524,7 +1554,6 @@ do
     TAS:Space()
 
     local gravacao = TAS:Group()
-
     gravacao:Button({ Title = "Gravar", Callback = startRecording })
     gravacao:Button({ Title = "Parar", Callback = stopRecording })
 
@@ -1535,7 +1564,6 @@ do
         Callback = saveCurrentTAS
     })
 end
-
 
 -- TUDO TEVEZ!!
 
