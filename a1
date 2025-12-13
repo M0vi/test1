@@ -1513,7 +1513,7 @@ do
     local TAS = ElementsSection:Tab({
         Title = "Parkour (TAS)",
         Icon = "lucide:keyboard",
-        IconColor = Red
+        IconColor = Color3.fromHex("#D4FFFA")
     })
 
     PlayToggle = TAS:Toggle({
