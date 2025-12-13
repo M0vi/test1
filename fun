@@ -1,0 +1,2642 @@
+local n = getrawmetatable(game)
+setreadonly(n, false)
+local o = n.__index
+
+n.__index = newcclosure(function(p, q)
+    if q == "Size" then
+        local ok, cls = pcall(function() return p.ClassName end)
+        if ok and cls == "Part" and p.Name == "HumanoidRootPart" then
+            return Vector3.new(2, 2, 1)
+        end
+    end
+    return o(p, q)
+end)
+
+setreadonly(n, true)
+
+local function bypass(h)
+    local ok, mt = pcall(getrawmetatable, h)
+    if not ok or not mt then return end
+
+    setreadonly(mt, false)
+
+    local old = mt.__index
+    mt.__index = newcclosure(function(s, k)
+        if s == h then
+            if k == "WalkSpeed" then return 16 end
+            if k == "JumpPower" then return 50 end
+        end
+        return old(s, k)
+    end)
+
+    setreadonly(mt, true)
+end
+
+-- =========================
+-- 2) SERVIÇOS E VARIABLES
+-- =========================
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+local Replicated = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local LocalizationService = game:GetService("LocalizationService")
+local TextChatService = game:GetService("TextChatService")
+
+local Player = Players.LocalPlayer
+local player = Players.LocalPlayer
+
+-- mapas
+
+local TEVEZ_MAPA = game.PlaceId == 13132367906
+
+-- Loader
+local WindUI
+do
+    local ok, result = pcall(function()
+        return require("./src/Init")
+    end)
+
+    if ok then
+        WindUI = result
+    else
+        WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+    end
+end
+
+-- =========================
+-- 3) UI
+-- =========================
+
+local Window = WindUI:CreateWindow({
+    Title = "Exército Brasileiro",
+    Folder = "fp3",
+    IconSize = 22*2,
+    NewElements = true,
+    Resizable = true,
+    HideSearchBar = false,
+    OpenButton = {
+        Title = "Abrir o menu",
+        CornerRadius = UDim.new(1,0),
+        StrokeThickness = 2,
+        Enabled = false,
+        Draggable = true
+    },
+    Topbar = {
+        Height = 40,
+        ButtonsType = "Mac",
+    },
+})
+
+local SecretWord = "/e" 
+local ChatConnection = nil
+
+local function setupChatToggle()
+    if ChatConnection then
+        ChatConnection:Disconnect()
+        ChatConnection = nil
+    end
+
+    ChatConnection = player.Chatted:Connect(function(msg)
+        if msg == SecretWord then
+            Window:Toggle()
+        end
+    end)
+end
+
+setupChatToggle()
+
+Window:Tag({
+    Title = "sanctuaryangels",
+    Icon = "geist:logo-gitlab",
+    Color = Color3.fromHex("#1c1c1c")
+})
+
+Window:Tag({
+    Title = "fp3",
+    Icon = "geist:logo-discord",
+    Color = Color3.fromHex("#1c1c1c")
+})
+
+local Purple = Color3.fromHex("#7775F2")
+local Yellow = Color3.fromHex("#ECA201")
+local Green = Color3.fromHex("#10C550")
+local Grey = Color3.fromHex("#83889E")
+local Blue = Color3.fromHex("#257AF7")
+local Red = Color3.fromHex("#EF4F1D")
+
+-- =========================
+-- 4) INFORMAÇÕES (TAB)
+-- =========================
+do
+    local AboutTab = Window:Tab({
+        Title = "Atualizações",
+        Desc = "",
+        Icon = "lucide:bell",
+        IconColor = Yellow
+    })
+
+    AboutTab:Image({
+        Image = "https://cdn.discordapp.com/attachments/1421660082579443816/1448274350334672936/6b44c0cf-d656-4e76-9e00-a5db9a88c206.jpg?ex=693aaa18&is=69395898&hm=d24f012ab9312bd635f1eb89c86b605d5bb2c647b30ee2073de1778112be1306&",
+        AspectRatio = "4:3",
+        Radius = 9,
+    })
+
+    AboutTab:Space({ Columns = 3 })
+
+    AboutTab:Section({
+        Title = "Changelogs:",
+        TextSize = 30,
+        FontWeight = Enum.FontWeight.SemiBold,
+    })
+
+    AboutTab:Space()
+
+    AboutTab:Section({
+        Title = [[
+- Implementação do gravador de parkour (mais info no Discord)!
+- otimizações e bug fixes no autofarm [TEVEZ]
+]]
+
+Desenvolvido e mantido por @fp3, em LuaU. Isso é apenas um hobby.]],
+        TextSize = 18,
+        TextTransparency = .35,
+        FontWeight = Enum.FontWeight.Medium,
+    })
+
+    AboutTab:Space({ Columns = 4 })
+end
+
+-- =========================
+-- 5) ElementSection
+-- =========================
+local ElementsSection = Window:Section({
+    Title = "Scripts",
+})
+
+-- =========================
+-- 6) NOTIFICAÇÕES
+-- =========================
+local function Notify(title, content, dur)
+    pcall(function()
+        WindUI:Notify({
+            Title = tostring(title or ""),
+            Content = tostring(content or ""),
+            Duration = dur or 3,
+            Icon = "bird"
+        })
+    end)
+end
+
+local function notif(t, d) Notify(t, d) end
+local function notif_af(t, d) Notify(t, d) end
+
+local WalkSpeedDefault = 16
+local NoClipConn = nil
+local CanCollide = true
+
+if Player.Character then
+    local hum = Player.Character:FindFirstChildOfClass("Humanoid")
+    if hum then bypass(hum) end
+end
+Player.CharacterAdded:Connect(function(c)
+    local h = c:WaitForChild("Humanoid")
+    bypass(h)
+end)
+
+-- Noclip
+
+local function NoClip()
+    if not CanCollide and Player.Character then
+        for _, v in pairs(Player.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.CanCollide then
+                v.CanCollide = false
+            end
+        end
+    end
+end
+
+
+-- =========================
+-- 8) TAB - Mods (UI)
+-- =========================
+
+do
+    local TabA = ElementsSection:Tab({
+        Title = "Local",
+        Icon = "lucide:ellipsis-vertical",
+        IconColor = Blue,
+    })
+
+    local speedValue = nil
+
+    TabA:Paragraph({
+        Title = "Speed",
+        Desc = "Modifica a velocidade do personagem. Burla a maioria dos anticheats.",
+    })
+
+    TabA:Input({
+        Title = "Speed",
+        Placeholder = "Valor",
+        Callback = function(v)
+if v == "" then return end
+            local n = tonumber(v)
+            speedValue = n
+            if n then
+                Notify("Speed", "Valor: "..tostring(n))
+            else
+                Notify("Speed", "Inválido")
+            end
+        end
+    })
+    TabA:Space()
+
+local grupamento1 = TabA:Group()
+
+    grupamento1:Button({
+        Title = "Aplicar velocidade",
+        Callback = function()
+            if not speedValue then
+                Notify("Speed", "Informe um valor válido.")
+                return
+            end
+
+            local h = Player.Character and Player.Character:FindFirstChild("Humanoid")
+            if h then
+                h.WalkSpeed = speedValue
+                Notify("Speed", "Alterada para "..tostring(speedValue))
+            else
+                Notify("Speed", "Personagem não encontrado.")
+            end
+        end
+    })
+    grupamento1:Space()
+
+    grupamento1:Button({
+        Title = "Resetar speed",
+        Callback = function()
+            local h = Player.Character and Player.Character:FindFirstChild("Humanoid")
+            if h then
+                h.WalkSpeed = WalkSpeedDefault or 16
+                Notify("Speed", "Restaurada")
+            end
+        end
+    })
+TabA:Space()
+
+local Antispawn = false
+local DeathCFrame = nil
+
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+local function onCharacterDied()
+	local character = player.Character
+    
+    if not Antispawn then
+        DeathCFrame = nil
+        return
+    end
+    
+	if character and character:FindFirstChild("HumanoidRootPart") then
+		DeathCFrame = character.HumanoidRootPart.CFrame
+	end
+end
+
+local function onCharacterAdded(character)
+	local humanoid = character:WaitForChild("Humanoid")
+	
+	humanoid.Died:Connect(onCharacterDied)
+
+	if Antispawn and DeathCFrame then
+		local hrp = character:WaitForChild("HumanoidRootPart")
+        
+        task.wait(0.05)
+        
+		hrp.CFrame = DeathCFrame
+	end
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+if player.Character then
+	onCharacterAdded(player.Character)
+end
+
+TabA:Toggle({
+    Title = "Anti-spawn",
+    Desc = "O personagem automaticamente teleportará ao local onde você morreu.",
+    Callback = function(v)
+        Antispawn = v
+        if not v then
+            DeathCFrame = nil
+        end
+    end
+})
+TabA:Space()
+
+TabA:Toggle({
+    Title = "Habilitar chat",
+    Desc = "Permite você ver o histórico de mensagens no chat.",
+    Callback = function(v)
+    TextChatService.ChatWindowConfiguration.Enabled = v
+    end
+})
+TabA:Space()
+
+TabA:Paragraph({
+        Title = "Noclip",
+        Desc = "Permite atravessar paredes.",
+    })
+
+    TabA:Toggle({
+        Title = "Noclip",
+        Callback = function(state)
+            if state then
+                CanCollide = false
+                if NoClipConn then
+                    pcall(function() NoClipConn:Disconnect() end)
+                end
+                NoClipConn = RunService.Stepped:Connect(NoClip)
+                Notify("Noclip", "[NOCLIP] Ativado")
+            else
+                CanCollide = true
+                if NoClipConn then
+                    pcall(function() NoClipConn:Disconnect() end)
+                    NoClipConn = nil
+                end
+                Notify("Noclip", "[NOCLIP] Desativado")
+            end
+        end
+    })
+end
+
+-- =========================
+-- 9) Hitbox e ESP
+-- =========================
+do
+    local TabB = ElementsSection:Tab({
+        Title = "Hitbox",
+        Icon = "lucide:person-standing",
+        IconColor = Green
+    })
+
+    local SectionHitbox = TabB:Section({
+        Title = "Hitbox expander"
+    })
+
+    local LocalPlayer = Players.LocalPlayer
+    local ESPEnabled = false
+
+local ESPSettings = {
+    Box = false,
+    Name = false,
+    Studs = false,
+    Health = false,
+    WeaponN = false
+}
+
+local ESP = {}
+
+local function ESP_New(Player)
+    if Player == LocalPlayer then return end
+
+    local E = {}
+
+    E.Box = Drawing.new("Square")
+    E.Box.Thickness = 2
+    E.Box.Filled = false
+    E.Box.Color = Color3.fromRGB(255, 255, 255)
+    E.Box.Visible = false
+
+    E.Health = Drawing.new("Text")
+    E.Health.Size = 13
+    E.Health.Color = Color3.fromRGB(255, 255, 255)
+    E.Health.Center = true
+    E.Health.Outline = true
+    E.Health.Font = 3
+    E.Health.Visible = false
+
+    E.Name = Drawing.new("Text")
+    E.Name.Size = 13
+    E.Name.Color = Color3.fromRGB(255, 255, 255)
+    E.Name.Center = true
+    E.Name.Outline = true
+    E.Name.Font = 3
+    E.Name.Visible = false
+
+    E.WeaponN = Drawing.new("Text")
+    E.WeaponN.Size = 13
+    E.WeaponN.Color = Color3.fromRGB(255, 255, 255)
+    E.WeaponN.Center = true
+    E.WeaponN.Outline = true
+    E.WeaponN.Font = 3
+    E.WeaponN.Visible = false
+
+    E.Studs = Drawing.new("Text")
+    E.Studs.Size = 13
+    E.Studs.Color = Color3.fromRGB(255, 255, 255)
+    E.Studs.Center = true
+    E.Studs.Outline = true
+    E.Studs.Font = 3
+    E.Studs.Visible = false
+
+    ESP[Player] = E
+end
+
+local function ESP_Remove(Player)
+    if ESP[Player] then
+        for _, v in pairs(ESP[Player]) do
+            pcall(function() v:Remove() end)
+        end
+        ESP[Player] = nil
+    end
+end
+
+-- criar para os atuais
+for _, plr in ipairs(Players:GetPlayers()) do
+    ESP_New(plr)
+end
+
+-- eventos
+Players.PlayerAdded:Connect(ESP_New)
+Players.PlayerRemoving:Connect(ESP_Remove)
+
+-- loop do ESP
+RunService.RenderStepped:Connect(function()
+    if not ESPEnabled then
+        for _, E in pairs(ESP) do
+            for _, v in pairs(E) do
+                v.Visible = false
+            end
+        end
+        return
+    end
+
+    for Player, E in pairs(ESP) do
+        local char = Player.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+        if not hum or hum.Health <= 0 or not hrp then
+            for _, v in pairs(E) do v.Visible = false end
+            continue
+        end
+
+        local cam = workspace.CurrentCamera
+        local cf, size = char:GetBoundingBox()
+        local min = cf.Position - size/2
+        local max = cf.Position + size/2
+
+        local corners = {
+            Vector3.new(min.X,min.Y,min.Z), Vector3.new(min.X,min.Y,max.Z),
+            Vector3.new(min.X,max.Y,min.Z), Vector3.new(min.X,max.Y,max.Z),
+
+            Vector3.new(max.X,min.Y,min.Z), Vector3.new(max.X,min.Y,max.Z),
+            Vector3.new(max.X,max.Y,min.Z), Vector3.new(max.X,max.Y,max.Z),
+        }
+
+        local screen = {}
+        local valid = true
+
+        for _, pt in ipairs(corners) do
+            local s, vis = cam:WorldToViewportPoint(pt)
+            if not vis then valid = false break end
+            table.insert(screen, Vector2.new(s.X, s.Y))
+        end
+
+        if not valid then
+            for _, v in pairs(E) do v.Visible = false end
+            continue
+        end
+
+        local minX, maxX = math.huge, -math.huge
+        local minY, maxY = math.huge, -math.huge
+
+        for _, s in ipairs(screen) do
+            minX = math.min(minX, s.X)
+            maxX = math.max(maxX, s.X)
+            minY = math.min(minY, s.Y)
+            maxY = math.max(maxY, s.Y)
+        end
+
+        -- box
+        if ESPSettings.Box then
+            E.Box.Position = Vector2.new(minX, minY)
+            E.Box.Size = Vector2.new(maxX - minX, maxY - minY)
+            E.Box.Visible = true
+        else
+            E.Box.Visible = false
+        end
+
+        -- nome
+        if ESPSettings.Name then
+            E.Name.Text = Player.Name
+            E.Name.Position = Vector2.new((minX + maxX)/2, minY - 16)
+            E.Name.Visible = true
+        else
+            E.Name.Visible = false
+        end
+
+        -- vida
+        if ESPSettings.Health then
+            E.Health.Text = "HP: "..math.floor(hum.Health)
+            E.Health.Position = Vector2.new((minX + maxX)/2, minY - 32)
+            E.Health.Visible = true
+        else
+            E.Health.Visible = false
+        end
+
+        -- studs
+        if ESPSettings.Studs and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+            E.Studs.Text = "["..math.floor(dist).."m]"
+            E.Studs.Position = Vector2.new((minX + maxX)/2, maxY + 5)
+            E.Studs.Visible = true
+        else
+            E.Studs.Visible = false
+        end
+
+        -- arma
+        if ESPSettings.WeaponN then
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool then
+                E.WeaponN.Text = tool.Name
+                E.WeaponN.Position = Vector2.new((minX + maxX)/2, maxY + 20)
+                E.WeaponN.Visible = true
+            else
+                E.WeaponN.Visible = false
+            end
+        else
+            E.WeaponN.Visible = false
+        end
+    end
+end)
+
+
+
+-- HB expander
+
+local HitboxEnabled = false
+local HitboxSize = Vector3.new(5,5,5) 
+local HitboxTransparency = 0.5
+
+local function ResetHitbox(plr)
+    if plr == LocalPlayer then return end
+    local char = plr.Character
+    if not char then return end
+
+    local HRP = char:FindFirstChild("HumanoidRootPart")
+    if not HRP then return end
+
+    HRP.Size = Vector3.new(2,2,1) 
+    HRP.Transparency = 0
+    HRP.CanCollide = true
+    HRP.Massless = false
+
+    local hl = HRP:FindFirstChild("a")
+    if hl then hl:Destroy() end
+end
+
+local function ApplyHitbox(plr)
+    if not HitboxEnabled then return end
+    if plr == LocalPlayer then return end
+    if plr.Team == LocalPlayer.Team then return end 
+    if not plr.Character then return end
+
+    local HRP = plr.Character:FindFirstChild("HumanoidRootPart")
+    if not HRP then return end
+
+    HRP.Size = HitboxSize
+    HRP.Transparency = HitboxTransparency
+    HRP.CanCollide = false
+    HRP.Massless = false
+
+    local old = HRP:FindFirstChild("a")
+    if old then old:Destroy() end 
+
+    local hl = Instance.new("Highlight")
+    hl.Name = "a"
+    hl.Parent = HRP
+    hl.FillColor = plr.TeamColor.Color
+    hl.OutlineColor = plr.TeamColor.Color
+    hl.FillTransparency = 1 - HitboxTransparency
+    hl.OutlineTransparency = HitboxTransparency
+end
+
+local function RefreshAll()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if HitboxEnabled then ApplyHitbox(plr) else ResetHitbox(plr) end 
+    end
+end
+
+local function HandleCharacter(character)
+    local plr = Players:GetPlayerFromCharacter(character)
+    if not plr then return end
+    
+    if HitboxEnabled then
+        ApplyHitbox(plr)
+    else
+        ResetHitbox(plr)
+    end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function(character)
+        task.wait(1)
+        HandleCharacter(character)
+    end) 
+    if plr.Character then
+        HandleCharacter(plr.Character)
+    end
+end)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr.Character then
+        HandleCharacter(plr.Character)
+    end
+    plr.CharacterAdded:Connect(function(character)
+        task.wait(1)
+        HandleCharacter(character)
+    end)
+end
+
+
+SectionHitbox:Paragraph({
+    Title = "Modificar hitbox",
+    Desc = "Altera o tamanho e visual da hitbox dos inimigos.",
+})
+
+SectionHitbox:Toggle({
+    Title = "Hitbox",
+    Callback = function(v)
+        HitboxEnabled = v
+        RefreshAll()
+    end
+})
+
+SectionHitbox:Input({
+    Title = "Tamanho da hitbox",
+    Desc = "Valor usado para mudar a hitbox dos inimigos.",
+    Placeholder = "Ex: 10",
+    Callback = function(v)
+        if v == "" then return end
+        local n = tonumber(v)
+        if not n then return end
+
+        HitboxSize = Vector3.new(n,n,n)
+        RefreshAll()
+    end
+})
+
+SectionHitbox:Space()
+
+SectionHitbox:Paragraph({
+    Title = "Transparência",
+    Desc = "Determina o quão visível a hitbox ficará. 0 = visível; 1 = invisível.",
+})
+
+SectionHitbox:Slider({
+    Title = "Transparência",
+    Step = 0.02,
+    Value = {
+        Min = 0,
+        Max = 1,
+        Default = 0.5,
+    },
+    Callback = function(val)
+        HitboxTransparency = val
+        RefreshAll()
+    end
+})
+
+
+local SectionESP = TabB:Section({
+        Title = "ESP"
+    })
+
+    SectionESP:Paragraph({
+        Title = "ESP",
+        Desc = "Permite ver players pela parede.",
+    })
+
+    SectionESP:Toggle({
+    Title = "Ativar",
+    Callback = function(v)
+        ESPEnabled = v
+    end
+})
+SectionESP:Space()
+
+SectionESP:Paragraph({
+        Title = "Opções",
+        Desc = "Ative o que você deseja ver!",
+    })
+
+SectionESP:Toggle({
+    Title = "Box",
+    Callback = function(v)
+        ESPSettings.Box = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Nome",
+    Callback = function(v)
+        ESPSettings.Name = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Distância",
+    Callback = function(v)
+        ESPSettings.Studs = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Vida",
+    Callback = function(v)
+        ESPSettings.Health = v
+    end
+})
+
+SectionESP:Toggle({
+    Title = "Item",
+    Callback = function(v)
+        ESPSettings.WeaponN = v
+    end
+})
+end
+
+-- =========================
+-- Auto JJ's
+-- =========================
+
+-- chat 
+
+local RemoteChat = {}
+local Connections = {}
+
+local WC = game.WaitForChild
+local FFC = game.FindFirstChild
+
+local TextChatService = game:GetService("TextChatService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui", 95)
+
+local CurrentChannel
+local InputBar = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
+
+local Methods = {
+    [Enum.ChatVersion.LegacyChatService] = function(Message)
+        local ChatUI = PlayerGui:FindFirstChild("Chat")
+        
+        if CurrentChannel then
+            CurrentChannel:SendAsync(Message)
+        elseif ChatUI then
+            local ChatFrame = WC(ChatUI, "Frame", 95)
+            local CBPF = WC(ChatFrame, "ChatBarParentFrame", 95)
+
+            local Frame = WC(CBPF, "Frame", 95)
+            local BF = WC(Frame, "BoxFrame", 95)
+
+            local ChatFM = WC(BF, "Frame", 95)
+            local ChatBar = FFC(ChatFM, "ChatBar", 95)
+
+            ChatBar:CaptureFocus()
+            ChatBar.Text = Message
+            ChatBar:ReleaseFocus(true)
+        end
+    end,
+
+    [Enum.ChatVersion.TextChatService] = function(Message)
+        if CurrentChannel then
+            CurrentChannel:SendAsync(Message)
+        end
+    end,
+}
+
+function RemoteChat:Send(Message)
+    pcall(Methods[TextChatService.ChatVersion], Message)
+end
+
+if InputBar then
+    table.insert(Connections, InputBar.Changed:Connect(function(Prop)
+        if Prop == "TargetTextChannel" and InputBar.TargetTextChannel 
+            and InputBar.TargetTextChannel:IsA("TextChannel") then
+
+            CurrentChannel = InputBar.TargetTextChannel
+        end
+    end))
+
+    if InputBar.TargetTextChannel and InputBar.TargetTextChannel:IsA("TextChannel") then
+        CurrentChannel = InputBar.TargetTextChannel
+    end
+end
+
+
+-- character (usado no jump)
+local Character = {}
+
+Character.__index = Character
+
+function Character.new(Player)
+	local self = setmetatable({}, Character)
+	
+	self.Player = Player
+	self.Connections = {}
+	
+	self.Character = Player.Character or Player.CharacterAdded:Wait()
+	self.Humanoid = self.Character:WaitForChild("Humanoid", 95)
+	self.Root = self.Character:WaitForChild("HumanoidRootPart", 95)
+	
+	table.insert(self.Connections, Player.CharacterAdded:Connect(function(Char)
+		self.Character = Char
+		self.Humanoid = Char:WaitForChild("Humanoid", 95)
+		self.Root = Char:WaitForChild("HumanoidRootPart", 95)
+	end))
+	
+	return self
+end
+
+function Character:ChangeHumanoidState(stateEnum)
+	if not self.Humanoid then return false end
+	
+	local success = pcall(function()
+		self.Humanoid:ChangeState(stateEnum)
+	end)
+	return success
+end
+
+function Character:Jump()
+	if not self.Humanoid then return false end
+	
+	local state = self.Humanoid:GetState()
+	
+	-- Só permite pular se o estado mostrar que está no chão
+	if state == Enum.HumanoidStateType.Running
+	or state == Enum.HumanoidStateType.RunningNoPhysics
+	or state == Enum.HumanoidStateType.Landed then
+	
+		return self:ChangeHumanoidState(Enum.HumanoidStateType.Jumping)
+	end
+	
+	return false
+end
+
+local Char = Character.new(Player)
+
+-- conversão
+
+local accentMap = {
+    ["á"]="Á",["à"]="À",["ã"]="Ã",["â"]="Â",
+    ["é"]="É",["ê"]="Ê",
+    ["í"]="Í",
+    ["ó"]="Ó",["ô"]="Ô",["õ"]="Õ",
+    ["ú"]="Ú",
+    ["ç"]="Ç"
+}
+
+local function unicodeUpper(str)
+    local out = {}
+    for _,c in utf8.codes(str) do
+        local ch = utf8.char(c)
+        out[#out+1] = accentMap[ch] or string.upper(ch)
+    end
+    return table.concat(out)
+end
+
+local units = {
+    [0]="zero",[1]="um",[2]="dois",[3]="três",[4]="quatro",[5]="cinco",
+    [6]="seis",[7]="sete",[8]="oito",[9]="nove",[10]="dez",[11]="onze",
+    [12]="doze",[13]="treze",[14]="catorze",[15]="quinze",[16]="dezesseis",
+    [17]="dezessete",[18]="dezoito",[19]="dezenove"
+}
+
+local tens = {
+    [2]="vinte",[3]="trinta",[4]="quarenta",[5]="cinquenta",
+    [6]="sessenta",[7]="setenta",[8]="oitenta",[9]="noventa"
+}
+
+local hundreds = {
+    [1]="cento",[2]="duzentos",[3]="trezentos",[4]="quatrocentos",
+    [5]="quinhentos",[6]="seiscentos",[7]="setecentos",[8]="oitocentos",
+    [9]="novecentos"
+}
+
+local scales_singular = {
+    [1]="mil",[2]="milhão",[3]="bilhão",[4]="trilhão",[5]="quatrilhão"
+}
+
+local scales_plural = {
+    [1]="mil",[2]="milhões",[3]="bilhões",[4]="trilhões",[5]="quatrilhões"
+}
+
+local function threeDigitToWords(n)
+    if n == 0 then return "" end
+    if n == 100 then return "cem" end
+
+    local h = math.floor(n / 100)
+    local rest = n % 100
+    local parts = {}
+
+    if h > 0 then table.insert(parts, hundreds[h]) end
+
+    if rest < 20 then
+        if rest > 0 then table.insert(parts, units[rest]) end
+    else
+        table.insert(parts, tens[math.floor(rest/10)])
+        local u = rest % 10
+        if u > 0 then table.insert(parts, units[u]) end
+    end
+
+    return table.concat(parts, " e ")
+end
+
+local function numberToWords(num)
+    num = tonumber(num)
+    if not num then return "NÚMERO INVÁLIDO" end
+    if num == 0 then return "ZERO" end
+
+    local groups = {}
+    while num > 0 do
+        table.insert(groups, num % 1000)
+        num = math.floor(num / 1000)
+    end
+
+    local parts = {}
+    for i = #groups,1,-1 do
+        local val = groups[i]
+        if val ~= 0 then
+            local text = threeDigitToWords(val)
+            if i > 1 then
+                local scale = (val==1) and scales_singular[i-1] or scales_plural[i-1]
+                if i == 2 and val == 1 then
+                    text = "mil"
+                else
+                    text = text.." "..scale
+                end
+            end
+            table.insert(parts, text)
+        end
+    end
+
+    return unicodeUpper(table.concat(parts, " e "))
+end
+
+
+-- AUTO JJ'S config e UI
+
+local running = false
+local startValue = 1
+local endValue   = 100
+
+local delayValue = 1.5              
+local randomDelayEnabled = false    
+local randomMin = 1                 
+local randomMax = 3                
+
+local jumpEnabled = false           
+local spacingEnabled = false        
+
+local reverseEnabled = false        
+
+local finishInTimeEnabled = false
+local finishTotalTime = 60
+
+local suffix = "!"
+local customSuffix = ""
+
+
+do
+    local Auto = ElementsSection:Tab({
+        Title = "Auto JJ's",
+        Icon = "lucide:keyboard",
+        IconColor = Red
+    })
+
+    local ETAParagraph = Auto:Paragraph({
+        Title = "Tempo",
+        Desc  = "Aguardando...",
+        Color = "Green",
+        Image = "",
+        ImageSize = 0,
+        Thumbnail = "",
+        ThumbnailSize = 0,
+        Locked = false,
+    })
+
+    local function updateETA(remaining, secondsLeft)
+        ETAParagraph:SetTitle("Tempo")
+        ETAParagraph:SetDesc(
+            string.format(
+                "Restando: %d JJ's\nTempo estimado: %.1f segundos",
+                remaining,
+                math.max(secondsLeft, 0)
+            )
+        )
+    end
+
+-- Section de JJ's
+
+local JJs = Auto:Section({
+        Title = "Essenciais"
+    })
+
+    JJs:Toggle({
+        Title = "Auto JJ's",
+        Callback = function(v)
+            running = v
+
+            if running then
+                task.spawn(function()
+
+                    local i = startValue
+                    local limit = endValue
+                    local step = 1
+
+                    if reverseEnabled then
+                        i = endValue
+                        limit = startValue
+                        step = -1
+                    end
+
+                    local totalJJ = math.abs(endValue - startValue) + 1
+
+                    local forcedDelay = nil
+                    local estimatedFinishTime = 0
+
+                    if finishInTimeEnabled then
+                        forcedDelay = finishTotalTime / totalJJ
+                        estimatedFinishTime = finishTotalTime
+                    end
+
+                    local executed = 0
+                    local countdown = estimatedFinishTime
+
+                    for num = i, limit, step do
+                        if not running then break end
+
+                        executed += 1
+                        local remaining = totalJJ - executed
+
+                        if finishInTimeEnabled then
+                            countdown = finishTotalTime - (executed * forcedDelay)
+                        else
+                            local avgDelay = randomDelayEnabled
+                                and ((randomMin + randomMax) / 2)
+                                or delayValue
+
+                            countdown = remaining * avgDelay
+                        end
+
+                        updateETA(remaining, countdown)
+
+                        -- MENSAGEM
+
+                        local word = numberToWords(num)
+                        local finalSuffix = (customSuffix ~= "" and customSuffix) or suffix
+                        local msg = spacingEnabled and (word .. " " .. finalSuffix) or (word .. finalSuffix)
+
+                        RemoteChat:Send(msg)
+
+                        -- PULAR
+                        if jumpEnabled then
+                            Char:Jump()
+                        end
+
+                        if finishInTimeEnabled and forcedDelay then
+                            task.wait(forcedDelay)
+                            continue
+                        end
+
+                        if randomDelayEnabled then
+                            local steps = math.floor((randomMax - randomMin) / 0.1)
+                            if steps < 0 then steps = 0 end
+
+                            local randStep = math.random(0, steps)
+                            local delay = randomMin + (randStep * 0.1)
+
+                            task.wait(delay)
+                        else
+                            task.wait(delayValue)
+                        end
+                    end
+
+                    updateETA(0, 0)
+                end)
+            end
+        end
+    })
+    JJs:Space()
+
+    JJs:Input({
+        Title = "Inicial",
+        Placeholder = "Ex: 1",
+        Callback = function(v)
+if v == "" then return end
+            startValue = tonumber(v) or 1
+        end
+    })
+
+    JJs:Input({
+        Title = "Final",
+        Placeholder = "Ex: 100",
+        Callback = function(v)
+if v == "" then return end
+            endValue = tonumber(v) or 100
+        end
+    })
+
+JJs:Toggle({
+        Title = "Pular",
+        Desc = "Pular ao enviar JJ's.",
+        Callback = function(v)
+            jumpEnabled = v
+        end
+    })
+
+JJs:Toggle({
+        Title = "Espaçamento",
+        Desc = "Separa o sufixo do número. (Ex: UM !)",
+        Callback = function(v)
+            spacingEnabled = v
+        end
+    })
+JJs:Space()
+
+JJs:Toggle({
+        Title = "Intervalo inteligente",
+        Desc  = "Ignora todos os intervalos e termina exatamente no tempo indicado.",
+        Callback = function(v)
+            finishInTimeEnabled = v
+        end
+    })
+
+    JJs:Input({
+        Title = "Tempo (segundos)",
+        Placeholder = "Ex: 100",
+        Callback = function(v)
+if v == "" then return end
+            finishTotalTime = tonumber(v) or 60
+        end
+    })
+JJs:Space()
+
+JJs:Dropdown({
+        Title = "Sufixo",
+        Values = { "!", "?", ".", ",", "/" },
+        Value = "!",
+        Callback = function(v)
+            suffix = v
+        end
+    })
+JJs:Space()
+
+    JJs:Input({
+        Title = "Sufixo customizado",
+        Placeholder = "Ex: @",
+        Callback = function(v)
+            customSuffix = tostring(v or "")
+        end
+    })
+
+-- Section dos intervalos
+
+local intervalos = Auto:Section({
+        Title = "Intervalo"
+    })
+
+    intervalos:Input({
+        Title = "Intervalo fixo (segundos)",
+        Placeholder = "Ex: 1.5",
+        Callback = function(v)
+if v == "" then return end
+            delayValue = tonumber(v) or 1.5
+        end
+    })
+intervalos:Space()
+
+    intervalos:Toggle({
+        Title = "Intervalo dinâmico",
+        Desc  = "Usa um intervalo aleatório entre mínimo e máximo.",
+        Callback = function(v)
+            randomDelayEnabled = v
+        end
+    })
+
+    intervalos:Input({
+        Title = "Valor mínimo",
+        Placeholder = "Ex: 1",
+        Callback = function(v)
+if v == "" then return end
+            randomMin = tonumber(v) or 1
+        end
+    })
+
+    intervalos:Input({
+        Title = "Valor máximo",
+        Placeholder = "Ex: 3",
+        Callback = function(v)
+if v == "" then return end
+            randomMax = tonumber(v) or 3
+        end
+    })
+
+-- Section Extras
+
+local Extras = Auto:Section({
+        Title = "Extras"
+    })
+
+    Extras:Toggle({
+        Title = "Modo reverso",
+        Desc  = "Conta de trás pra frente.",
+        Callback = function(v)
+            reverseEnabled = v
+        end
+    })
+end
+
+
+
+-- PARKOUR (TAS)
+
+do
+    --// SERVICES
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local HttpService = game:GetService("HttpService")
+    local PathfindingService = game:GetService("PathfindingService")
+
+    local LocalPlayer = Players.LocalPlayer
+    local Camera = Workspace.CurrentCamera
+
+    --// FOLDER
+    local TAS_FOLDER = "fp3_Parkours"
+    if writefile and not isfolder(TAS_FOLDER) then
+        makefolder(TAS_FOLDER)
+    end
+
+    --// STATE
+    local Recording = false
+    local Playing = false
+    local Frames = {}
+    local RecordConn
+    local PlayConn
+
+    local CurrentName
+    local SelectedTAS
+    local TASDropdown
+
+    --// CHARACTER UTILS
+    local function getHRP()
+        local c = LocalPlayer.Character
+        return c and c:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function getHumanoid()
+        local c = LocalPlayer.Character
+        return c and c:FindFirstChildOfClass("Humanoid")
+    end
+
+    --// FRAME CAPTURE
+    local function captureFrame()
+        local hrp = getHRP()
+        local hum = getHumanoid()
+        if not hrp or not hum then return end
+
+        return {
+            cf = { hrp.CFrame:GetComponents() },
+            cam = { Camera.CFrame:GetComponents() },
+            vel = { hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z },
+            jump = hum.Jump
+        }
+    end
+
+    --// APPLY FRAME
+    local function applyFrame(f)
+        local hrp = getHRP()
+        local hum = getHumanoid()
+        if not hrp or not hum then return end
+
+        hrp.CFrame = CFrame.new(unpack(f.cf))
+        hrp.Velocity = Vector3.new(f.vel[1], f.vel[2], f.vel[3])
+        Camera.CFrame = CFrame.new(unpack(f.cam))
+        hum.Jump = f.jump
+    end
+
+    --// RECORD
+    local function startRecording()
+        if Recording then return end
+        Frames = {}
+        Recording = true
+
+        RecordConn = RunService.Heartbeat:Connect(function()
+            local frame = captureFrame()
+            if frame then
+                Frames[#Frames + 1] = frame
+            end
+        end)
+
+        Notify("TAS", "Gravação iniciada")
+    end
+
+    local function stopRecording()
+        if not Recording then return end
+        Recording = false
+        if RecordConn then RecordConn:Disconnect() end
+        RecordConn = nil
+
+        Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
+    end
+
+    --// PATHFINDING TO START
+    local function walkToStart(targetCF, callback)
+        local hrp = getHRP()
+        local hum = getHumanoid()
+        if not hrp or not hum then return end
+
+        Notify("TAS", "Indo até o ponto inicial")
+
+        local path = PathfindingService:CreatePath({
+            AgentRadius = 2,
+            AgentHeight = 5,
+            AgentCanJump = true
+        })
+
+        path:ComputeAsync(hrp.Position, targetCF.Position)
+        if path.Status ~= Enum.PathStatus.Success then
+            Notify("TAS", "Falha no pathfinding")
+            return
+        end
+
+        task.spawn(function()
+            for _, wp in ipairs(path:GetWaypoints()) do
+                hum:MoveTo(wp.Position)
+                hum.MoveToFinished:Wait()
+            end
+            if callback then callback() end
+        end)
+    end
+
+    --// PLAYBACK
+    local function playTAS()
+        if Playing or #Frames == 0 then
+            Notify("TAS", "Nenhuma gravação carregada")
+            return
+        end
+
+        walkToStart(CFrame.new(unpack(Frames[1].cf)), function()
+            Playing = true
+            Notify("TAS", "Replay iniciado")
+
+            local i = 1
+            PlayConn = RunService.Heartbeat:Connect(function()
+                if i > #Frames then
+                    PlayConn:Disconnect()
+                    PlayConn = nil
+                    Playing = false
+                    Notify("TAS", "Replay finalizado")
+                    return
+                end
+                applyFrame(Frames[i])
+                i += 1
+            end)
+        end)
+    end
+
+    --// FILE UTILS
+    local function getSavedTAS()
+        local out = {}
+        if listfiles then
+            for _, file in ipairs(listfiles(TAS_FOLDER)) do
+                if file:sub(-5) == ".json" then
+                    out[#out + 1] = file:match("([^/]+)%.json$")
+                end
+            end
+        end
+        return out
+    end
+
+    local function saveCurrentTAS()
+        if not CurrentName or CurrentName == "" then
+            Notify("TAS", "Defina um nome primeiro")
+            return
+        end
+        if #Frames == 0 then
+            Notify("TAS", "Nenhuma gravação para salvar")
+            return
+        end
+
+        writefile(
+            TAS_FOLDER .. "/" .. CurrentName .. ".json",
+            HttpService:JSONEncode({ Version = 1, Frames = Frames })
+        )
+
+        Notify("TAS", "Gravação salva: " .. CurrentName)
+        TASDropdown:Refresh(getSavedTAS())
+    end
+
+    local function loadTAS(name)
+        -- 🔒 bloqueia chamadas automáticas inválidas
+        if not name or name == "" then return end
+
+        local path = TAS_FOLDER .. "/" .. name .. ".json"
+        if not isfile(path) then return end
+
+        local data = HttpService:JSONDecode(readfile(path))
+        Frames = data.Frames or {}
+        SelectedTAS = name
+
+        Notify("TAS", "Selecionado: " .. name)
+    end
+
+    local function deleteTAS()
+        if not SelectedTAS then
+            Notify("TAS", "Nenhuma gravação selecionada")
+            return
+        end
+
+        local path = TAS_FOLDER .. "/" .. SelectedTAS .. ".json"
+        if isfile(path) then
+            delfile(path)
+            Notify("TAS", "Gravação deletada: " .. SelectedTAS)
+
+            SelectedTAS = nil
+            Frames = {}
+
+            TASDropdown:Refresh(getSavedTAS())
+        end
+    end
+
+    --// UI
+    local TAS = ElementsSection:Tab({
+        Title = "Parkour (TAS)",
+        Icon = "lucide:keyboard",
+        IconColor = Red
+    })
+
+    TAS:Toggle({
+        Title = "Play",
+        Desc = "Inicia o parkour.",
+        Callback = function(v)
+            if v then playTAS() end
+        end
+    })
+
+    TASDropdown = TAS:Dropdown({
+        Title = "Selecionar gravação",
+        Desc = "Gravação que será usada para dar play.",
+        Values = getSavedTAS(),
+        Value = "",
+        Callback = function(v)
+            if not v or v == "" then return end
+            loadTAS(v)
+        end
+    })
+
+    TAS:Button({
+        Title = "Deletar gravação",
+        Desc = "Deleta a gravação selecionada.",
+        Callback = deleteTAS
+    })
+
+    TAS:Space()
+
+    TAS:Input({
+        Title = "Nome do TAS",
+        Desc = "Nome que será usado para salvar a gravação.",
+        Placeholder = "Ex: Torre",
+        Callback = function(v)
+            if v ~= "" then
+                CurrentName = v
+                Notify("TAS", "Nome definido: " .. v)
+            end
+        end
+    })
+
+    TAS:Space()
+
+    local gravacao = TAS:Group()
+
+    gravacao:Button({ Title = "Gravar", Callback = startRecording })
+    gravacao:Button({ Title = "Parar", Callback = stopRecording })
+
+    TAS:Space()
+
+    TAS:Button({
+        Title = "Salvar gravação",
+        Callback = saveCurrentTAS
+    })
+end
+
+
+-- TUDO TEVEZ!!
+
+if TEVEZ_MAPA then
+
+do
+local TevezApenas = Window:Section({
+    Title = "[EB] Tevez",
+    Desc = "Exclusivos do jogo",
+    Icon = "lucide:gamepad-2",
+    IconColor = Color3.fromHex("#1C3811")
+})
+
+-- KILL AURA
+
+local GS = Replicated:WaitForChild("GunSystem")
+local GC = GS:WaitForChild("GunsConfigurations")
+local FireEvent = GS.Remotes.Events.Fire
+local ReloadFunction = GS.Remotes.Functions.Reload
+
+local Active = true
+local Aura = false
+local Blocker = false
+local Connections = {}
+local Tasks = {}
+local LastTargetTime = 0
+
+local function track(c) table.insert(Connections, c) end
+local function trackTask(t) table.insert(Tasks, t) end
+local function reg(target) LastTargetTime = tick() end
+
+local function HasGun()
+    local bp = Player:FindFirstChild("Backpack")
+    local char = Player.Character
+
+    for _, cfg in ipairs(GC:GetChildren()) do
+        local n = cfg.Name
+        if (bp and bp:FindFirstChild(n)) or (char and char:FindFirstChild(n)) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Pega a info da arma
+local function GetGun()
+    local c = Player.Character
+    if not c then return nil end
+
+    local tool = c:FindFirstChildWhichIsA("Tool")
+    if not tool then return nil end
+
+    local cfgInstance = GC:FindFirstChild(tool.Name)
+    if not cfgInstance then return nil end
+
+    local ok, moduleTable = pcall(function() return require(cfgInstance) end)
+    if ok and type(moduleTable) == "table" then
+        return moduleTable, tool.Name
+    end
+
+if type(getgc) == "function" then
+    for _, v in ipairs(getgc()) do
+        if type(v) == "table" and rawget(v, "BackCFrame") and rawget(v, "Damage") then
+            if rawget(v, "Name") == tool.Name or rawget(v, "Title") == tool.Name then
+                return v, tool.Name
+            end
+        end
+    end
+end
+
+return nil, tool.Name
+end
+
+-- Modifica os values da arma
+local function ModifyGun(prop, val)
+    local cfg, gunName = GetGun()
+    if not cfg then
+        Notify("Erro", "Não foi possível obter configuração da arma.")
+        return
+    end
+
+-- Check da propriedade
+    if rawget(cfg, prop) == nil then
+        Notify("Erro", "Propriedade '"..tostring(prop).."' não existe nesta arma.")
+        return
+    end
+
+    rawset(cfg, prop, val)
+end
+
+-- Recarregar
+trackTask(task.spawn(function()
+    while task.wait(0.25) do
+        if not Active or not Aura or not HasGun() then continue end
+        local c = Player.Character
+        if not c then continue end
+
+        local tool = c:FindFirstChildWhichIsA("Tool")
+        if not tool then continue end
+
+        pcall(function()
+            ReloadFunction:InvokeServer(tool)
+        end)
+    end
+end))
+
+-- Kill aura
+trackTask(task.spawn(function()
+    local rp = RaycastParams.new()
+    rp.FilterType = Enum.RaycastFilterType.Exclude
+
+    while Active do
+        if Aura and HasGun() and Player.Character then
+            local c = Player.Character
+            local tool = c:FindFirstChildWhichIsA("Tool")
+
+            if tool then
+                local cfgInstance = GC:FindFirstChild(tool.Name)
+                if cfgInstance then
+                    local cfgData = (pcall(function() return require(cfgInstance) end) and require(cfgInstance)) or nil
+                    local firePart = tool:FindFirstChild("FirePart") or tool:FindFirstChild("Handle") or tool.PrimaryPart
+                    if firePart then
+                        rp.FilterDescendantsInstances = {Player.Character}
+
+                        local target, dist = nil, math.huge
+
+                        for _, plr in ipairs(Players:GetPlayers()) do
+                            if plr ~= Player and plr.Team ~= Player.Team and plr.Character then
+                                local h = plr.Character:FindFirstChildOfClass("Humanoid")
+                                if h and h.Health > 0 then
+                                    local head = plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
+                                    if head then
+                                        local d = (head.Position - firePart.Position).Magnitude
+                                        if d < dist then
+                                            dist = d
+                                            target = head
+                                        end
+                                    end
+                                end
+                            end
+                        end
+
+                        if target then
+                            local direction = target.Position - firePart.Position
+                            local result = workspace:Raycast(firePart.Position, direction.Unit * direction.Magnitude, rp)
+
+                            local hitPos = (result and result.Position) or target.Position
+                            local info = {
+                                [target] = {
+                                    Normal   = (result and result.Normal) or Vector3.new(0,1,0),
+                                    Position = hitPos,
+                                    Instance = target,
+                                    Distance = direction.Magnitude,
+                                    Material = (result and result.Material) or Enum.Material.ForceField
+                                }
+                            }
+
+                            pcall(function()
+                                FireEvent:FireServer(tool, info, hitPos)
+                            end)
+
+                            reg(target.Parent)
+                        end
+                    end
+                end
+            end
+        end
+
+        task.wait()
+    end
+end))
+
+-- UI MODS TEVEZ
+
+do
+    local TevezMods = TevezApenas:Tab({
+        Title = "Mods",
+        Icon = "lucide:chevrons-left-right-ellipsis",
+        IconColor = Color3.fromHex("#C012FF")
+    })
+
+    local SectionKillAura = TevezMods:Section({
+        Title = "Kill Aura"
+    })
+
+    SectionKillAura:Paragraph({
+        Title = "Kill Aura [RISCO DE BAN]",
+        Color = Color3.fromHex("#FF1D0D"),
+        Desc = "Enquanto estiver com a arma, mata todos os inimigos ao redor de você. Não mata inimigos em safezones.",
+    })
+
+local KillAuraToggle
+
+SectionKillAura:Toggle({
+    Title = "Permitir",
+    Desc = "O uso de kill aura é de sua conta e risco, você será banido caso for denunciado. Use uma alt.",
+    Callback = function(state)
+        if state then
+            KillAuraToggle:Unlock()
+            Notify("Permissão", "Concedida")
+        else
+            KillAuraToggle:Set(false) 
+            
+            KillAuraToggle:Lock()
+            Notify("Permissão", "Negada.")
+        end
+    end
+})
+
+KillAuraToggle = SectionKillAura:Toggle({
+    Title = "Kill-aura [RISCO DE BAN]",
+    Callback = function(state)
+        if state then
+            if not HasGun() then
+                Blocker = true
+                KillAuraToggle:Set(false)
+                Notify("Erro", "Você precisa de uma arma.")
+                return
+            end
+            Aura = true
+            Blocker = false
+            Notify("Script", "[KILL-AURA] Ativado")
+        else
+            Aura = false
+            Notify("Script", "[KILL-AURA] Desativado")
+        end
+    end
+})
+
+KillAuraToggle:Lock()
+
+
+    SectionKillAura:Space()
+
+local SectionArma = TevezMods:Section({
+        Title = "Arma"
+    })
+
+    local bulletsValue = nil
+    local spreadValue  = nil
+    local rangeValue   = nil
+
+    SectionArma:Paragraph({
+        Title = "Bullets",
+        Desc = "Modifica a quantidade de balas que saem da arma por disparo. Além disso, multiplica o dano por hit.",
+    })
+
+    SectionArma:Input({
+        Title = "Bullets",
+        Placeholder = "Valor",
+        Callback = function(v)
+if v == "" then return end
+            local n = tonumber(v)
+            bulletsValue = n
+            if n then
+                Notify("Bullets", "Valor: "..tostring(n))
+            else
+                Notify("Bullets", "Inválido")
+            end
+        end
+    })
+    SectionArma:Space()
+
+    SectionArma:Paragraph({
+        Title = "Spread",
+        Desc = "Controla a dispersão dos tiros. Quanto maior, mais espalhado os tiros sairão da arma. Quanto menor, mais juntas as balas ficarão.",
+    })
+
+    SectionArma:Input({
+        Title = "Spread",
+        Placeholder = "Valor",
+        Callback = function(v)
+            local n = tonumber(v)
+if v == "" then return end
+            spreadValue = n
+            if n then
+                Notify("Spread", "Valor: "..tostring(n))
+            else
+                Notify("Spread", "Inválido")
+            end
+        end
+    })
+    SectionArma:Space()
+
+    SectionArma:Paragraph({
+        Title = "Range",
+        Desc = "Distância pela qual o disparo consegue chegar.",
+    })
+
+    SectionArma:Input({
+        Title = "Range",
+        Placeholder = "Valor",
+        Callback = function(v)
+            local n = tonumber(v)
+if v == "" then return end
+            rangeValue = n
+            if n then
+                Notify("Range", "Valor: "..tostring(n))
+            else
+                Notify("Range", "Inválido")
+            end
+        end
+    })
+    SectionArma:Space()
+
+    SectionArma:Paragraph({
+        Title = "Aplicar mods",
+        Desc = "Aplica as modificações na arma equipada.",
+    })
+
+    SectionArma:Button({
+        Title = "Aplicar mods",
+        Callback = function()
+            if not HasGun() then
+                Notify("Erro", "Equipe uma arma para modificar.")
+                return
+            end
+            if bulletsValue then ModifyGun("Bullets", bulletsValue) end
+            if spreadValue then ModifyGun("Spread", spreadValue) end
+            if rangeValue then ModifyGun("Range", rangeValue) end
+            Notify("Mods", "Aplicações feitas.")
+        end
+    })
+end
+
+
+-- =========================
+-- Autofarm LÓGICA
+-- =========================
+_G.AutoFarm = false
+
+local cfg = ...
+local ModoSeguro = (cfg and cfg.ModoSeguro) or false
+local RaioDeSeguranca = (cfg and cfg.ModoSeguro) or 60
+
+local PS = game:GetService("Players")
+local WS = game:GetService("Workspace")
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local plr = PS.LocalPlayer
+local char, root, bag
+
+local bank = WS.Map.Robbery.Bank
+local status = bank.RobberyStatus.SurfaceGui.BankStatus
+local CollectPos = bank.CollectPad.Position 
+
+local Remotes = RS.Assets.Remotes
+local BuyShop = Remotes.BuyShop
+local Robbery = Remotes.Robbery
+
+local rodando = false
+local ultimaVenda = 0
+local DinheiroInicial = 0
+local DinheiroFarmado = 0
+local MIN_MONEY_REQUIRED = 1300
+
+local FarmStatus
+
+local AFK_DISTANCE = 10
+local AFK_LEFT_POS = CollectPos - Vector3.new(AFK_DISTANCE, 0, 0)
+local AFK_RIGHT_POS = CollectPos + Vector3.new(AFK_DISTANCE, 0, 0)
+local AFK_SPEED = 0.03
+
+local Kaio = WS.Map.NPCS.Kaio
+-- Simplificamos a VENDER_POS para garantir o teletransporte estável
+local VENDER_POS = Kaio.HumanoidRootPart.Position - Vector3.new(0, 10, 0) 
+
+
+-- Declarações antecipadas para funções que se chamam mutuamente
+local seguro
+local aberto
+local fechado
+
+local function UpdateStatus(msg)
+    if FarmStatus and FarmStatus.SetDesc then 
+        FarmStatus:SetDesc("✌️ Status: " .. msg .. "\n💰 Farmado total: R$ " .. tostring(DinheiroFarmado))
+    end
+end
+
+
+local function tp(v)
+	if char and root then
+		char:PivotTo(CFrame.new(v))
+	end
+end
+
+local function esperaDinamica(delayTime)
+    delayTime = delayTime or 0
+    
+    local startTime = tick()
+    
+    while aberto() and _G.AutoFarm and (tick() - startTime < delayTime) do
+        
+        if seguro() then 
+            task.wait(0.1) 
+            continue 
+        end
+        
+        tp(AFK_LEFT_POS + Vector3.new(0, 4, 0))
+        task.wait(AFK_SPEED)
+
+        tp(AFK_RIGHT_POS + Vector3.new(0, 4, 0))
+        task.wait(AFK_SPEED)
+    end
+    
+    return not aberto() or not _G.AutoFarm
+end
+
+
+local function ref()
+	char = plr.Character or plr.CharacterAdded:Wait()
+	root = char:WaitForChild("HumanoidRootPart")
+	bag  = plr:WaitForChild("Backpack")
+end
+ref()
+
+
+local function item(n)
+	local b = plr:FindFirstChild("Backpack")
+	return (b and b:FindFirstChild(n)) or (char and char:FindFirstChild(n))
+end
+
+-- Definições de status
+aberto = function()
+	return status.Text == "ABERTO"
+end
+
+fechado = function()
+    return status.Text == "FECHADO"
+end
+
+
+local function spin()
+	char:PivotTo(root.CFrame * CFrame.Angles(0, math.rad(30), 0))
+end
+
+local function dinheiro()
+	for _,v in ipairs(WS:GetDescendants()) do
+		if v.Name == "Money Bag" then
+			local h = v:FindFirstChildWhichIsA("BasePart")
+			if not h then continue end
+			local att = h:FindFirstChild("DataAttachment")
+			if not att then continue end
+			local gui = att:FindFirstChild("BillboardGui")
+			if not gui then continue end
+			local l = gui.Frame:FindFirstChild("Money")
+			if l then return tonumber(l.Text:match("%d+")) or 0 end
+		end
+	end
+	return 0
+end
+
+-- Definição de seguro (que usa 'aberto' e 'fechado')
+seguro = function()
+	if not ModoSeguro then return false end
+	if not root then return false end
+    if not _G.AutoFarm or fechado() then return false end 
+
+	for _,p in ipairs(PS:GetPlayers()) do
+		if p ~= plr and p.Character then
+			local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+			if hrp and (hrp.Position - root.Position).Magnitude <= RaioDeSeguranca then
+				UpdateStatus("MODO SEGURO: Há algum player por perto. Aguardando...")
+                
+                tp(AFK_LEFT_POS + Vector3.new(0, 4, 0)) 
+                
+				repeat
+					task.wait(0.4)
+				until not _G.AutoFarm or fechado()
+				or not hrp
+				or (hrp.Position - root.Position).Magnitude > RaioDeSeguranca
+                
+                if not _G.AutoFarm or fechado() then 
+                    UpdateStatus("Farm interrompido (Modo Seguro/Banco Fechado)")
+                    return true 
+                end
+
+				UpdateStatus("Retomando farm...")
+				return true 
+			end
+		end
+	end
+
+	return false
+end
+
+local c4Comprada = false
+local BUY_POS = Vector3.new(-766, 19, -365)
+
+local function tentarComprarC4()
+	if c4Comprada then return true end
+	if item("C4") then c4Comprada = true return true end
+	UpdateStatus("Comprando C4...")
+	tp(BUY_POS)
+	task.wait(1)
+	BuyShop:FireServer("C4")
+	-- Reduzido o número de loops para ser mais eficiente
+	for i = 1, 15 do
+		if item("C4") then
+			c4Comprada = true
+			return true
+		end
+		task.wait(0.1)
+	end
+	return false
+end
+
+-- 🛠️ FUNÇÃO VENDER CORRIGIDA: Adicionamos 'forceSell' e ajustamos o loop e espera
+local function vender(forceSell)
+	UpdateStatus("Entregando...")
+    
+    -- Se não for uma venda forçada (fechamento do banco), verifica segurança e status.
+	if not forceSell and (seguro() or fechado()) then return end 
+    if not _G.AutoFarm then return end
+    
+    -- Teleporta para a posição de venda (Kaio)
+	tp(VENDER_POS) 
+	task.wait(0.5) 
+    
+    -- Loop de venda
+	while dinheiro() > 0 and _G.AutoFarm do 
+        -- Mantemos a verificação de segurança
+		if seguro() then break end 
+        
+        -- Se não for venda forçada, para se o banco fechar durante a venda
+        if not forceSell and fechado() then break end 
+        
+        -- Chamada de rede
+		Robbery:FireServer("Payment")
+        
+        -- AUMENTAMOS O WAIT: Isso reduz o lag/flood de rede.
+		task.wait(1.5) 
+	end
+    
+    if not _G.AutoFarm then return end
+
+	task.wait(0.5)
+	tp(CollectPos)
+	task.wait(0.1)
+	esperaDinamica(0.5) 
+	local saldoAtual = plr.leaderstats.Dinheiro.Value
+	DinheiroFarmado = saldoAtual - DinheiroInicial
+	UpdateStatus("Sucesso!")
+end
+
+
+local function farm()
+    if rodando or not _G.AutoFarm then return end 
+    
+    if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
+        UpdateStatus("Erro: Necessário $" .. MIN_MONEY_REQUIRED .. " para comprar C4.")
+        rodando = false
+        return
+    end
+
+    rodando = true
+
+    task.spawn(function()
+        if not aberto() then
+            UpdateStatus("Esperando o banco abrir...")
+            repeat task.wait(0.2) until aberto() or not _G.AutoFarm 
+            if not _G.AutoFarm then rodando = false return end
+        end
+
+        UpdateStatus("Banco abriu! Indo comprar a C4...")
+
+		c4Comprada = false
+		if not tentarComprarC4() or not _G.AutoFarm or fechado() then 
+            UpdateStatus("Erro: Não foi possível comprar C4 ou farm parado.")
+            rodando = false
+            return
+        end
+
+		local c4 = item("C4")
+		if c4 then char.Humanoid:EquipTool(c4) end
+
+		local prompt = bank.BankVault.C4.Handle:FindFirstChildOfClass("ProximityPrompt")
+		local vaultPos = bank.BankVault.Vault.Front.Position
+
+		local function usarC4AteSumir()
+		    UpdateStatus("Plantando a C4...")
+		    while aberto() and _G.AutoFarm do 
+		        if seguro() then continue end
+		        local c4Tool = item("C4")
+		        if not c4Tool then
+		            break
+		        end
+		        fireproximityprompt(prompt)
+		        task.wait(0.15)
+		    end
+		end
+
+		tp(vaultPos)
+		task.wait(1)
+        
+        if not _G.AutoFarm or fechado() then rodando = false return end 
+        
+		usarC4AteSumir()
+        
+		if not _G.AutoFarm or fechado() then rodando = false return end 
+        
+		esperaDinamica(11) 
+        
+		while aberto() and _G.AutoFarm do 
+
+			if seguro() then continue end
+
+			if dinheiro() >= 4000 then
+				task.wait(8)
+				vender()
+                if not aberto() or not _G.AutoFarm then break end 
+			else
+				UpdateStatus("Coletando dinheiro...")
+				tp(CollectPos)
+				task.wait(0.05)
+				spin()
+                
+				if char.Humanoid.Health < 50 then
+					UpdateStatus("Curando...")
+					tp(AFK_LEFT_POS + Vector3.new(0, 4, 0))
+                    
+					repeat task.wait(0.2) until char.Humanoid.Health >= 90 or not _G.AutoFarm or fechado() 
+                    if not _G.AutoFarm or fechado() then break end 
+				end
+                
+                esperaDinamica(0.5)
+                
+                if not aberto() or not _G.AutoFarm then break end 
+			end
+		end
+
+		rodando = false 
+	end)
+end
+
+plr.CharacterAdded:Connect(function()
+	task.wait(0.3)
+	ref()
+	if _G.AutoFarm and aberto() then
+		UpdateStatus("Você morreu. Reiniciando farm")
+		farm() 
+	end
+	char:WaitForChild("Humanoid").Died:Connect(function()
+		rodando = false
+		ref()
+		task.wait(1)
+		if _G.AutoFarm and aberto() then
+			tp(CollectPos)
+            tp(AFK_LEFT_POS + Vector3.new(0, 4, 0))
+			farm()
+		end
+	end)
+end)
+
+-- 🛠️ CORREÇÃO NO EVENTO DE FECHAMENTO: Removemos o wait longo e forçamos a venda
+status:GetPropertyChangedSignal("Text"):Connect(function()
+	if not _G.AutoFarm then 
+        rodando = false 
+        return 
+    end
+    
+	if status.Text == "ABERTO" then
+		farm()
+		return
+	end
+    
+	if status.Text == "FECHADO" then
+        
+		local agora = tick()
+		if agora - ultimaVenda < 5 then 
+            rodando = false
+            return 
+        end
+		ultimaVenda = agora
+        
+		task.spawn(function()
+			-- task.wait(3) removido para reagir imediatamente ao fechamento
+			
+			if not _G.AutoFarm then return end
+			local d = dinheiro()
+			if d > 0 and _G.AutoFarm then 
+				-- Chama a venda passando 'true' para forçar a execução (forceSell)
+				vender(true) 
+			end
+		end)
+        
+        rodando = false
+	end
+end)
+
+plr.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	ref()
+end)
+
+
+local Cash = TevezApenas:Tab({
+    Title = "Autofarm",
+    Icon = "lucide:wallet",
+    IconColor = Color3.fromHex("#03FF20")
+})
+
+FarmStatus = Cash:Paragraph({
+    Title = "",
+    Desc = "",
+    Color = "Green",
+    Image = "",
+    ImageSize = 30,
+    Thumbnail = "",
+    ThumbnailSize = 80,
+    Locked = false,
+    Buttons = {}
+})
+
+FarmStatus:SetTitle("Status do Autofarm")
+UpdateStatus("Aguardando...")
+
+local AutofarmToggle = Cash:Toggle({
+    Title = "Autofarm",
+    Desc = "Ativa ou desativa o autofarm.",
+    Callback = function(v)
+        _G.AutoFarm = v
+
+        if v then
+            if plr.leaderstats.Dinheiro.Value < MIN_MONEY_REQUIRED then
+                Notify("Erro", "Necessário R$" .. MIN_MONEY_REQUIRED .. " para iniciar o autofarm.")
+                AutofarmToggle:Set(false) 
+                _G.AutoFarm = false
+                return
+            end
+            
+            rodando = false
+            DinheiroInicial = plr.leaderstats.Dinheiro.Value
+            DinheiroFarmado = 0
+            UpdateStatus("Autofarm iniciado")
+            farm() 
+        else
+            UpdateStatus("Autofarm desativado")
+            rodando = false 
+        end
+    end
+})
+Cash:Space()
+
+Cash:Toggle({
+    Title = "Modo seguro",
+    Desc = "Interrompe o autofarm caso alguém esteja a uma X distância de você.",
+    Callback = function(v)
+        ModoSeguro = v
+        Notify("Modo Seguro", v and "Ativado" or "Desativado")
+    end
+})
+
+Cash:Input({
+    Title = "Raio de segurança",
+    Desck = "Se alguém estiver dentro desse raio, interromperá o autofarm até que não haja ninguém nesse mesmo raio.",
+    Placeholder = "Ex: 100 (seguro)",
+    Callback = function(v)
+        if v == "" then return end
+        local n = tonumber(v)
+        if not n then
+            Notify("Erro", "Digite um número válido.")
+            return
+        end
+        RaioDeSeguranca = n
+        Notify("NOVO VALOR", ""..tostring(n))
+    end
+})
+end -- Section do Tevez
+end -- Tab do tevez
+
+
+
+local Outros = Window:Section({
+    Title = "Outros",
+})
+
+-- =========================
+-- 10) DISCORD
+-- =========================
+do
+    local InviteCode = "4gcMZxKPcQ"
+    local DiscordAPI = "https://discord.com/api/v10/invites/" .. InviteCode .. "?with_counts=true&with_expiration=true"
+
+    local Response = WindUI.cloneref(game:GetService("HttpService")):JSONDecode(WindUI.Creator.Request({
+        Url = DiscordAPI,
+        Method = "GET",
+        Headers = {
+            ["User-Agent"] = "WindUI/Example",
+            ["Accept"] = "application/json"
+        }
+    }).Body)
+
+    local DiscordTab = Outros:Tab({
+    Title = "Comunidade",
+    Icon = "geist:logo-discord",
+    IconColor = Blue
+})
+
+if Response and Response.guild then
+    DiscordTab:Section({
+        Title = "Entre em nosso Discord!",
+        TextSize = 30,
+    })
+
+    DiscordTab:Paragraph({
+        Title = tostring(Response.guild.name),
+        Desc = "Servidor de exploits para Roblox",
+        Image = "https://cdn.discordapp.com/icons/" .. Response.guild.id .. "/" .. Response.guild.icon .. ".png?size=1024",
+        Thumbnail = "https://cdn.discordapp.com/attachments/1421660082579443816/1448274350334672936/6b44c0cf-d656-4e76-9e00-a5db9a88c206.jpg?ex=693aaa18&is=69395898&hm=d24f012ab9312bd635f1eb89c86b605d5bb2c647b30ee2073de1778112be1306&",
+        ImageSize = 80,
+        Buttons = {
+            {
+                Title = "Copiar link!",
+                Icon = "link",
+                Callback = function()
+                    setclipboard("https://discord.gg/" .. InviteCode)
+                end
+            }
+        }
+    })
+end
+end
+
+
+-- =========================
+-- 11) Sugestões
+-- =========================
+
+do
+local Sugestoes = Outros:Tab({ Title = "Sugestões", Icon = "lucide:message-circle", IconColor = Yellow })
+
+local requestFunc = syn and syn.request or request or http_request
+local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
+
+-- ======================================================
+--  CONFIG
+-- ======================================================
+
+local COOLDOWN_SUGESTAO  = 1800      -- 30 min
+local COOLDOWN_AVALIACAO = 21600     -- 6h
+
+-- Arquivo persistente para armazenar timestamps
+local fileName = "v" .. tostring(HWID) .. ".json"
+
+local Saved = {
+    sugestao  = 0,
+    avaliacao = 0
+}
+
+-- ======================================================
+--  ARQUIVOS
+-- ======================================================
+
+local function Save()
+    writefile(fileName, HttpService:JSONEncode(Saved))
+end
+
+local function Load()
+    if not isfile(fileName) then
+        Save()
+        return
+    end
+    
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(readfile(fileName))
+    end)
+
+    if ok and typeof(data) == "table" then
+        Saved = data
+    end
+end
+
+Load()
+
+-- ======================================================
+--  ENVIAR PARA WEBHOOK
+-- ======================================================
+
+local WEBHOOK_AVALIACAO = "https://rbxhook.cc/r/cc3ff315c0a81e4a0c4187195b3388ed"
+local WEBHOOK_SUGESTAO  = "https://rbxhook.cc/r/5b1667a03cf9b0dcdfce0bb5144bf58b"
+
+local function isoTimestamp()
+    return os.date("!%Y-%m-%dT%H:%M:%S.000Z")
+end
+
+local function EnviarPayload(isSug, texto, nota, anonimo)
+    local hook = isSug and WEBHOOK_SUGESTAO or WEBHOOK_AVALIACAO
+    local nome = anonimo and "Anônimo" or player.Name
+
+    local embed = {
+        title = (isSug and "Sugestão feita por: " .. nome or "Avaliação feita por: " .. nome),
+        description = isSug 
+            and ("\n> **" .. texto .. "**\n")
+            or ("Nota: **" .. nota .. "/10**\n\n> **" .. texto .. "**\n"),
+        timestamp = isoTimestamp(),
+        color = 14280458
+    }
+
+    requestFunc({
+        Url = hook,
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = HttpService:JSONEncode({
+            username = isSug and "Sugestão" or "Avaliação",
+            embeds = { embed }
+        })
+    })
+end
+
+-- ======================================================
+--  SUGESTÃO
+-- ======================================================
+
+local sugestao = Sugestoes:Section({ Title = "Sugestão? Envie-me!" })
+
+local anonimatoSug = false
+sugestao:Toggle({
+    Title = "Anonimato",
+    Default = false,
+    Callback = function(v) anonimatoSug = v end
+})
+
+local sugestaoBox = sugestao:Input({
+    Title = "Sua sugestão",
+    Type = "Textarea",
+    Icon = "mouse",
+})
+
+sugestao:Button({
+    Title = "Enviar",
+    Callback = function()
+        local now = os.time()
+
+        -- COOLDOWN
+        if now < Saved.sugestao then
+            local rest = Saved.sugestao - now
+            Notify("COOLDOWN!", "Você só pode enviar outra sugestão em " .. rest .. " segundos.")
+            return
+        end
+
+        if sugestaoBox.Value == "" then
+            Notify("Erro", "Digite algo antes de enviar.")
+            return
+        end
+
+        -- atualiza o cooldown
+        Saved.sugestao = now + COOLDOWN_SUGESTAO
+        Save()
+
+        EnviarPayload(true, sugestaoBox.Value, nil, anonimatoSug)
+        Notify("Obrigada!", "Sugestão enviada.")
+    end
+})
+
+-- ======================================================
+--  AVALIAÇÃO
+-- ======================================================
+
+local avaliar = Sugestoes:Section({ Title = "Avalie!" })
+
+local anonimatoAval = false
+avaliar:Toggle({
+    Title = "Anonimato",
+    Default = false,
+    Callback = function(v) anonimatoAval = v end
+})
+
+local avaliarNota = "10"
+avaliar:Dropdown({
+    Title = "Nota",
+    Desc = "Escolha a nota",
+    Values = { "1","2","3","4","5","6","7","8","9","10" },
+    Value = "10",
+    Callback = function(v) avaliarNota = v end
+})
+
+local avaliarBox = avaliar:Input({
+    Title = "Avaliação",
+    Type = "Textarea",
+    Icon = "mouse",
+})
+
+avaliar:Button({
+    Title = "Enviar",
+    Callback = function()
+        local now = os.time()
+
+        -- COOLDOWN
+        if now < Saved.avaliacao then
+            local rest = Saved.avaliacao - now
+            Notify("Espere!", "Você só pode enviar outra avaliação em " .. rest .. " segundos.")
+            return
+        end
+
+        if avaliarBox.Value == "" then
+            Notify("Erro", "Escreva sua avaliação antes de enviar.")
+            return
+        end
+
+        -- atualiza o cooldown
+        Saved.avaliacao = now + COOLDOWN_AVALIACAO
+        Save()
+
+        EnviarPayload(false, avaliarBox.Value, avaliarNota, anonimatoAval)
+        Notify("Agradeço!", "Avaliação enviada.")
+    end
+})
+end
+
+-- Configurações
+
+local configuracoes = Window:Tab({ Title = "Configurações", Icon = "geist:settings-gear", IconColor = Grey })
+
+configuracoes:Input({
+    Title = "Palavra secreta",
+    Desc = "Palavra ou frase que será digitada no chat para abrir / fechar a UI. Padrão: /e",
+    Placeholder = "Ex: /e",
+    Callback = function(v)
+        local has_space = string.find(v or "", "%s")
+        local is_empty = string.len(v or "") == 0
+        
+        if not is_empty and not has_space then
+            SecretWord = v
+            setupChatToggle()
+            Notify("Palavra Secreta", "Definida para: " .. v .. " para abrir a UI.")
+        else
+            -- Notificação de erro
+            Notify("Erro", "A palavra secreta não pode ser vazia nem conter espaços.")
+            
+            SecretWord = "/e"
+            setupChatToggle()
+            Notify("Palavra Secreta", "Resetada para: /e")
+        end
+    end
+})
+
+
+local KeybindKey = Enum.KeyCode.Z 
+local KeybindConnection = nil 
+local KeybindInitialized = false -- Novo controle de inicialização
+
+local function setupKeybind()
+    if KeybindConnection then
+        KeybindConnection:Disconnect()
+        KeybindConnection = nil
+    end
+
+    KeybindConnection = UIS.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+
+        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == KeybindKey then
+            
+            Window:Toggle()
+        end
+    end)
+    
+    if KeybindInitialized then
+        Notify("Keybind", "Keybind definida para: " .. tostring(KeybindKey))
+    end
+end
+
+
+configuracoes:Input({
+    Title = "Keybind",
+    Desc = "Tecla para abrir e fechar a UI (Apenas letras).",
+    Flag = "Config_Keybind",
+    Placeholder = tostring(KeybindKey),
+    Callback = function(v)
+        local keyName = string.upper(string.gsub(v or "", "%s+", ""))
+        
+        if string.len(keyName) == 0 then
+            Notify("Erro", "A Keybind não pode ser vazia.")
+            return
+        end
+
+        local success, newKeybind = pcall(function()
+            return Enum.KeyCode[keyName]
+        end)
+
+        if success and newKeybind then
+            KeybindKey = newKeybind
+            setupKeybind()
+            KeybindInitialized = true
+        else
+            Notify("Erro", "Tecla '" .. keyName .. "' inválida. Use apenas letras (A-Z).")
+        end
+    end
+})
+
+
+do
+    local TestSection = Window:Section({
+        Title = "Feito com carinho",
+        Icon = "geist:heart",
+        IconColor = Color3.fromHex("#fA1616")
+    })
+end
+
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/M0vi/k/refs/heads/main/k"))()
+--logs 
