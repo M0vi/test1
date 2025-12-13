@@ -1267,7 +1267,7 @@ end
 
 
 -- =========================
--- PARKOUR (TAS) – START MANUAL COM CÍRCULO NO CHÃO
+-- PARKOUR (TAS) – START MANUAL COM CÍRCULO PEQUENO
 -- =========================
 
 do
@@ -1295,7 +1295,7 @@ do
     local RecordConn, PlayConn, MarkerConn
     local CurrentName, SelectedTAS
     local TASDropdown
-    local StartMarker -- Part (círculo)
+    local StartMarker
 
     --// CHARACTER UTILS
     local function getHRP()
@@ -1362,7 +1362,7 @@ do
         if StartMarker then StartMarker:Destroy() StartMarker = nil end
     end
 
-    --// CREATE START CIRCLE
+    --// CREATE START CIRCLE (PEQUENO)
     local function createStartCircle(cf)
         clearMarker()
         WaitingForStart = true
@@ -1370,43 +1370,38 @@ do
         local circle = Instance.new("Part")
         circle.Name = "TAS_StartCircle"
         circle.Shape = Enum.PartType.Cylinder
-        circle.Size = Vector3.new(0.2, 8, 8) -- altura pequena, raio visual
+        circle.Size = Vector3.new(0.15, 2.5, 2.5) -- 🔹 círculo pequeno
         circle.CFrame = cf * CFrame.Angles(0, 0, math.rad(90))
         circle.Anchored = true
         circle.CanCollide = false
-        circle.Transparency = 0.5
+        circle.Transparency = 0.4
         circle.Material = Enum.Material.Neon
         circle.Color = Color3.fromRGB(0, 255, 0)
         circle.CastShadow = false
         circle.Parent = Workspace
 
-        -- ver através de paredes
         local hl = Instance.new("Highlight")
         hl.Adornee = circle
         hl.FillColor = circle.Color
-        hl.FillTransparency = 0.5
+        hl.FillTransparency = 0.4
         hl.OutlineTransparency = 1
         hl.Parent = circle
 
         StartMarker = circle
 
-        Notify("TAS", "Fique em cima do círculo verde para iniciar")
+        Notify("TAS", "Fique exatamente sobre o ponto verde")
 
-        local RADIUS = 4       -- raio do círculo
-        local HEIGHT_TOL = 4   -- tolerância vertical
+        local RADIUS = 1.5
+        local HEIGHT_TOL = 3
 
         MarkerConn = RunService.Heartbeat:Connect(function()
             local hrp = getHRP()
             if not hrp then return end
 
-            -- distância horizontal (XZ)
             local delta = hrp.Position - cf.Position
             local horizontalDist = Vector3.new(delta.X, 0, delta.Z).Magnitude
 
-            -- diferença de altura
-            local heightDiff = math.abs(delta.Y)
-
-            if horizontalDist <= RADIUS and heightDiff <= HEIGHT_TOL then
+            if horizontalDist <= RADIUS and math.abs(delta.Y) <= HEIGHT_TOL then
                 clearMarker()
 
                 Playing = true
@@ -1467,11 +1462,28 @@ do
 
     local function loadTAS(name)
         clearMarker()
-        if not name or name == "" then Frames = {} return end
+        if not name or name == "" then Frames = {} SelectedTAS = nil return end
         local path = TAS_FOLDER .. "/" .. name .. ".json"
         if not isfile(path) then return end
         Frames = HttpService:JSONDecode(readfile(path)).Frames or {}
         SelectedTAS = name
+    end
+
+    local function deleteTAS()
+        if not SelectedTAS then
+            Notify("TAS", "Nenhuma gravação selecionada")
+            return
+        end
+
+        local path = TAS_FOLDER .. "/" .. SelectedTAS .. ".json"
+        if isfile(path) then delfile(path) end
+
+        SelectedTAS = nil
+        Frames = {}
+        TASDropdown:Set("")
+        TASDropdown:Refresh(getSavedTAS())
+
+        Notify("TAS", "Gravação deletada")
     end
 
     --// UI
@@ -1495,9 +1507,16 @@ do
         Callback = loadTAS
     })
 
+    TAS:Button({
+        Title = "Deletar gravação",
+        Callback = deleteTAS
+    })
+
     TAS:Input({
         Title = "Nome do TAS",
-        Callback = function(v) if v ~= "" then CurrentName = v end end
+        Callback = function(v)
+            if v ~= "" then CurrentName = v end
+        end
     })
 
     local g = TAS:Group()
@@ -1505,7 +1524,6 @@ do
     g:Button({ Title = "Parar", Callback = stopRecording })
     TAS:Button({ Title = "Salvar gravação", Callback = saveCurrentTAS })
 end
-
 
 -- TUDO TEVEZ!!
 
