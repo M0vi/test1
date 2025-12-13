@@ -1391,8 +1391,8 @@ do
 
         Notify("TAS", "Fique exatamente sobre o ponto verde")
 
-        local RADIUS = 1.5
-        local HEIGHT_TOL = 3
+        local RADIUS = 1
+        local HEIGHT_TOL = 1
 
         MarkerConn = RunService.Heartbeat:Connect(function()
             local hrp = getHRP()
@@ -1489,7 +1489,7 @@ do
     --// UI
     local TAS = ElementsSection:Tab({
         Title = "Parkour (TAS)",
-        Icon = "lucide:keyboard",
+        Icon = "lucide:video",
         IconColor = Red
     })
 
@@ -1512,6 +1512,8 @@ do
         Callback = deleteTAS
     })
 
+TAS:Space()
+
     TAS:Input({
         Title = "Nome do TAS",
         Callback = function(v)
@@ -1522,6 +1524,7 @@ do
     local g = TAS:Group()
     g:Button({ Title = "Gravar", Callback = startRecording })
     g:Button({ Title = "Parar", Callback = stopRecording })
+TAS:Space()
     TAS:Button({ Title = "Salvar gravação", Callback = saveCurrentTAS })
 end
 
