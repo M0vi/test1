@@ -1266,9 +1266,8 @@ local Extras = Auto:Section({
 end
 
 
-
 -- =========================
--- PARKOUR (TAS) – START MANUAL (PLAYER REAL)
+-- PARKOUR (TAS) – START MANUAL COM CÍRCULO NO CHÃO
 -- =========================
 
 do
@@ -1293,10 +1292,10 @@ do
     local WaitingForStart = false
     local Frames = {}
 
-    local RecordConn, PlayConn
+    local RecordConn, PlayConn, MarkerConn
     local CurrentName, SelectedTAS
     local TASDropdown
-    local StartMarker = nil
+    local StartMarker -- Part (círculo)
 
     --// CHARACTER UTILS
     local function getHRP()
@@ -1338,15 +1337,12 @@ do
     --// RECORD
     local function startRecording()
         if Recording then return end
-
         Frames = {}
         Recording = true
 
         RecordConn = RunService.Heartbeat:Connect(function()
             local frame = captureFrame()
-            if frame then
-                Frames[#Frames + 1] = frame
-            end
+            if frame then Frames[#Frames + 1] = frame end
         end)
 
         Notify("TAS", "Gravação iniciada")
@@ -1354,93 +1350,65 @@ do
 
     local function stopRecording()
         if not Recording then return end
-
         Recording = false
-        if RecordConn then
-            RecordConn:Disconnect()
-            RecordConn = nil
-        end
-
+        if RecordConn then RecordConn:Disconnect() end
         Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
     end
 
-    --// START MARKER (BLOCO + SETA + TEXTO)
-    local function createStartMarker(cf)
-        if StartMarker then StartMarker:Destroy() end
-
-        local model = Instance.new("Model")
-        model.Name = "TAS_StartMarker"
-        model.Parent = Workspace
-
-        -- bloco verde
-        local part = Instance.new("Part")
-        part.Size = Vector3.new(6, 1, 6)
-        part.Anchored = true
-        part.CanCollide = false
-        part.Transparency = 0.45
-        part.Color = Color3.fromRGB(0, 255, 0)
-        part.Material = Enum.Material.Neon
-        part.CFrame = cf
-        part.Parent = model
-
-        -- seta
-        local arrow = Instance.new("Part")
-        arrow.Size = Vector3.new(0.2, 2, 0.2)
-        arrow.Anchored = true
-        arrow.CanCollide = false
-        arrow.Color = Color3.fromRGB(0, 255, 0)
-        arrow.Material = Enum.Material.Neon
-        arrow.CFrame = cf * CFrame.new(0, 3, 0)
-        arrow.Parent = model
-
-        local cone = Instance.new("SpecialMesh")
-        cone.MeshType = Enum.MeshType.Cone
-        cone.Parent = arrow
-
-        -- texto
-        local gui = Instance.new("BillboardGui")
-        gui.Size = UDim2.fromScale(6, 2)
-        gui.StudsOffset = Vector3.new(0, 5, 0)
-        gui.AlwaysOnTop = true
-        gui.Parent = part
-
-        local text = Instance.new("TextLabel")
-        text.Size = UDim2.fromScale(1, 1)
-        text.BackgroundTransparency = 1
-        text.Text = "Fique aqui!"
-        text.TextScaled = true
-        text.TextColor3 = Color3.fromRGB(0, 255, 0)
-        text.Font = Enum.Font.GothamBold
-        text.Parent = gui
-
-        StartMarker = model
+    --// REMOVE MARKER
+    local function clearMarker()
+        WaitingForStart = false
+        if MarkerConn then MarkerConn:Disconnect() MarkerConn = nil end
+        if StartMarker then StartMarker:Destroy() StartMarker = nil end
     end
 
-    --// WAIT PLAYER ENTER MARKER
-    local function waitForPlayerInMarker(startFrame)
-        if not startFrame then return end
-
+    --// CREATE START CIRCLE
+    local function createStartCircle(cf)
+        clearMarker()
         WaitingForStart = true
-        createStartMarker(CFrame.new(unpack(startFrame.cf)))
 
-        Notify("TAS", "Vá até o marcador verde para iniciar")
+        local circle = Instance.new("Part")
+        circle.Name = "TAS_StartCircle"
+        circle.Shape = Enum.PartType.Cylinder
+        circle.Size = Vector3.new(0.2, 8, 8) -- altura pequena, raio visual
+        circle.CFrame = cf * CFrame.Angles(0, 0, math.rad(90))
+        circle.Anchored = true
+        circle.CanCollide = false
+        circle.Transparency = 0.5
+        circle.Material = Enum.Material.Neon
+        circle.Color = Color3.fromRGB(0, 255, 0)
+        circle.CastShadow = false
+        circle.Parent = Workspace
 
-        local conn
-        conn = RunService.Heartbeat:Connect(function()
+        -- ver através de paredes
+        local hl = Instance.new("Highlight")
+        hl.Adornee = circle
+        hl.FillColor = circle.Color
+        hl.FillTransparency = 0.5
+        hl.OutlineTransparency = 1
+        hl.Parent = circle
+
+        StartMarker = circle
+
+        Notify("TAS", "Fique em cima do círculo verde para iniciar")
+
+        local RADIUS = 4       -- raio do círculo
+        local HEIGHT_TOL = 4   -- tolerância vertical
+
+        MarkerConn = RunService.Heartbeat:Connect(function()
             local hrp = getHRP()
-            if not hrp or not StartMarker then return end
+            if not hrp then return end
 
-            local part = StartMarker:FindFirstChildWhichIsA("Part")
-            if not part then return end
+            -- distância horizontal (XZ)
+            local delta = hrp.Position - cf.Position
+            local horizontalDist = Vector3.new(delta.X, 0, delta.Z).Magnitude
 
-            local dist = (hrp.Position - part.Position).Magnitude
-            if dist <= 3 then
-                conn:Disconnect()
-                WaitingForStart = false
-                StartMarker:Destroy()
-                StartMarker = nil
+            -- diferença de altura
+            local heightDiff = math.abs(delta.Y)
 
-                -- iniciar replay
+            if horizontalDist <= RADIUS and heightDiff <= HEIGHT_TOL then
+                clearMarker()
+
                 Playing = true
                 Notify("TAS", "Replay iniciado")
 
@@ -1461,16 +1429,15 @@ do
         end)
     end
 
-    --// PLAY (MANUAL START)
+    --// PLAY
     local function playTAS()
         if Playing or WaitingForStart then return end
-
         if not Frames or #Frames == 0 then
             Notify("TAS", "Selecione ou grave um TAS primeiro")
             return
         end
 
-        waitForPlayerInMarker(Frames[1])
+        createStartCircle(CFrame.new(unpack(Frames[1].cf)))
     end
 
     --// FILE UTILS
@@ -1487,53 +1454,24 @@ do
     end
 
     local function saveCurrentTAS()
-        if not CurrentName or CurrentName == "" then
-            Notify("TAS", "Defina um nome")
-            return
-        end
-        if #Frames == 0 then
-            Notify("TAS", "Nada para salvar")
-            return
-        end
+        if not CurrentName or CurrentName == "" then return end
+        if #Frames == 0 then return end
 
         writefile(
             TAS_FOLDER .. "/" .. CurrentName .. ".json",
             HttpService:JSONEncode({ Version = 1, Frames = Frames })
         )
 
-        Notify("TAS", "Salvo: " .. CurrentName)
         TASDropdown:Refresh(getSavedTAS())
     end
 
     local function loadTAS(name)
-        if not name or name == "" then
-            SelectedTAS = nil
-            Frames = {}
-            return
-        end
-
+        clearMarker()
+        if not name or name == "" then Frames = {} return end
         local path = TAS_FOLDER .. "/" .. name .. ".json"
         if not isfile(path) then return end
-
         Frames = HttpService:JSONDecode(readfile(path)).Frames or {}
         SelectedTAS = name
-    end
-
-    local function deleteTAS()
-        if not SelectedTAS or SelectedTAS == "" then
-            Notify("TAS", "Selecione uma gravação")
-            return
-        end
-
-        local path = TAS_FOLDER .. "/" .. SelectedTAS .. ".json"
-        if isfile(path) then delfile(path) end
-
-        SelectedTAS = nil
-        Frames = {}
-        TASDropdown:Set("")
-        TASDropdown:Refresh(getSavedTAS())
-
-        Notify("TAS", "Gravação deletada")
     end
 
     --// UI
@@ -1546,35 +1484,28 @@ do
     TAS:Toggle({
         Title = "Play",
         Callback = function(v)
-            if v then playTAS() end
+            if v then playTAS()
+            else clearMarker() end
         end
     })
 
     TASDropdown = TAS:Dropdown({
         Title = "Selecionar gravação",
         Values = getSavedTAS(),
-        Value = "",
-        Callback = function(v)
-            loadTAS(v)
-        end
+        Callback = loadTAS
     })
-
-    TAS:Button({ Title = "Deletar gravação", Callback = deleteTAS })
 
     TAS:Input({
         Title = "Nome do TAS",
-        Placeholder = "Ex: Torre",
-        Callback = function(v)
-            if v ~= "" then CurrentName = v end
-        end
+        Callback = function(v) if v ~= "" then CurrentName = v end end
     })
 
-    local gravacao = TAS:Group()
-    gravacao:Button({ Title = "Gravar", Callback = startRecording })
-    gravacao:Button({ Title = "Parar",  Callback = stopRecording })
-
+    local g = TAS:Group()
+    g:Button({ Title = "Gravar", Callback = startRecording })
+    g:Button({ Title = "Parar", Callback = stopRecording })
     TAS:Button({ Title = "Salvar gravação", Callback = saveCurrentTAS })
 end
+
 
 -- TUDO TEVEZ!!
 
