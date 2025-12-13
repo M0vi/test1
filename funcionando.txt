@@ -1270,7 +1270,7 @@ end
 -- PARKOUR (TAS)
 
 -- =========================
--- PARKOUR (TAS) – COMPLETO + INÍCIO SUAVE
+-- PARKOUR (TAS) – CAMERA ONLY ALIGN (SHIFTLOCK)
 -- =========================
 
 do
@@ -1295,12 +1295,9 @@ do
     local Playing = false
     local Frames = {}
 
-    local RecordConn = nil
-    local PlayConn = nil
-
-    local CurrentName = nil
-    local SelectedTAS = nil
-    local TASDropdown = nil
+    local RecordConn, PlayConn
+    local CurrentName, SelectedTAS
+    local TASDropdown
 
     --// CHARACTER UTILS
     local function getHRP()
@@ -1320,14 +1317,14 @@ do
         if not hrp or not hum then return end
 
         return {
-            cf  = { hrp.CFrame:GetComponents() },
+            cf  = { hrp.CFrame:GetComponents() }, -- usado só no replay
             cam = { Camera.CFrame:GetComponents() },
             vel = { hrp.Velocity.X, hrp.Velocity.Y, hrp.Velocity.Z },
             jump = hum.Jump
         }
     end
 
-    --// APPLY FRAME
+    --// APPLY FRAME (REPLAY REAL)
     local function applyFrame(f)
         local hrp = getHRP()
         local hum = getHumanoid()
@@ -1339,27 +1336,22 @@ do
         hum.Jump = f.jump
     end
 
-    --// SMOOTH ALIGN (INÍCIO HUMANO)
-    local function smoothAlign(frame, duration)
-        duration = duration or 0.45
+    --// CAMERA-ONLY ALIGN (SHIFTLOCK STYLE)
+    local function smoothCameraAlign(frame, duration)
+        duration = duration or 0.35
 
-        local hrp = getHRP()
-        if not hrp then return end
-
-        local startCF = hrp.CFrame
         local startCam = Camera.CFrame
-
-        local targetCF = CFrame.new(unpack(frame.cf))
         local targetCam = CFrame.new(unpack(frame.cam))
 
         local t0 = tick()
         local conn
 
-        conn = RunService.Heartbeat:Connect(function()
+        conn = RunService.RenderStepped:Connect(function()
             local alpha = math.clamp((tick() - t0) / duration, 0, 1)
 
-            -- Lerp realista
-            hrp.CFrame = startCF:Lerp(targetCF, alpha)
+            -- curva levemente humana
+            alpha = alpha ^ 1.15
+
             Camera.CFrame = startCam:Lerp(targetCam, alpha)
 
             if alpha >= 1 then
@@ -1397,13 +1389,11 @@ do
         Notify("TAS", "Gravação parada (" .. #Frames .. " frames)")
     end
 
-    --// PATHFINDING TO START
+    --// PATHFINDING TO START (NÃO MEXE NA CÂMERA)
     local function walkToStart(targetCF, callback)
         local hrp = getHRP()
         local hum = getHumanoid()
         if not hrp or not hum then return end
-
-        Notify("TAS", "Indo até o ponto inicial")
 
         local path = PathfindingService:CreatePath({
             AgentRadius = 2,
@@ -1413,7 +1403,7 @@ do
 
         path:ComputeAsync(hrp.Position, targetCF.Position)
         if path.Status ~= Enum.PathStatus.Success then
-            Notify("TAS", "Falha ao chegar no início")
+            Notify("TAS", "Falha ao ir para o início")
             return
         end
 
@@ -1426,7 +1416,7 @@ do
         end)
     end
 
-    --// PLAYBACK (COM INÍCIO SUAVE)
+    --// PLAYBACK (INÍCIO NATURAL)
     local function playTAS()
         if Playing then return end
 
@@ -1437,9 +1427,9 @@ do
 
         walkToStart(CFrame.new(unpack(Frames[1].cf)), function()
 
-            -- 🔹 Ajuste humano (olhar + alinhar corpo)
-            smoothAlign(Frames[1], 0.45)
-            task.wait(0.45 + math.random(6,12)/100) -- micro delay humano
+            -- 🔹 Só câmera, estilo mouse humano
+            smoothCameraAlign(Frames[1], 0.35)
+            task.wait(0.35 + math.random(6,12)/100)
 
             Playing = true
             Notify("TAS", "Replay iniciado")
@@ -1464,9 +1454,9 @@ do
     local function getSavedTAS()
         local out = {}
         if listfiles then
-            for _, file in ipairs(listfiles(TAS_FOLDER)) do
-                if file:sub(-5) == ".json" then
-                    out[#out + 1] = file:match("([^/]+)%.json$")
+            for _, f in ipairs(listfiles(TAS_FOLDER)) do
+                if f:sub(-5) == ".json" then
+                    out[#out + 1] = f:match("([^/]+)%.json$")
                 end
             end
         end
@@ -1480,7 +1470,7 @@ do
         end
 
         if #Frames == 0 then
-            Notify("TAS", "Nenhuma gravação para salvar")
+            Notify("TAS", "Nada para salvar")
             return
         end
 
@@ -1505,6 +1495,7 @@ do
 
         Frames = HttpService:JSONDecode(readfile(path)).Frames or {}
         SelectedTAS = name
+
         Notify("TAS", "Selecionado: " .. name)
     end
 
@@ -1535,7 +1526,6 @@ do
 
     TAS:Toggle({
         Title = "Play",
-        Desc = "Executa o TAS",
         Callback = function(v)
             if v then playTAS() end
         end
@@ -1563,7 +1553,6 @@ do
         Callback = function(v)
             if v ~= "" then
                 CurrentName = v
-                Notify("TAS", "Nome definido: " .. v)
             end
         end
     })
@@ -1581,7 +1570,6 @@ do
         Callback = saveCurrentTAS
     })
 end
-
 
 -- TUDO TEVEZ!!
 
